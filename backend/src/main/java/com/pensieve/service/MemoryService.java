@@ -1,10 +1,12 @@
-﻿package com.pensieve.service;
+package com.pensieve.service;
 
 import com.pensieve.dto.MemoryRequest;
 import com.pensieve.dto.MemoryResponse;
 import com.pensieve.dto.PagedResponse;
 import com.pensieve.entity.Memory;
 import com.pensieve.repository.MemoryRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -12,12 +14,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class MemoryService {
 
     private final MemoryRepository memoryRepository;
+    private final RedisService redisService;
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
     @Transactional
     public MemoryResponse create(MemoryRequest request) {
@@ -31,6 +37,7 @@ public class MemoryService {
                 .build();
 
         Memory saved = memoryRepository.save(memory);
+        redisService.evictRecentMemories();
         return MemoryResponse.from(saved);
     }
 
@@ -52,6 +59,29 @@ public class MemoryService {
     }
 
     @Transactional(readOnly = true)
+    public List<MemoryResponse> getRecent(int limit) {
+        String cached = redisService.getRecentMemories();
+        if (cached != null) {
+            try {
+                return objectMapper.readValue(cached,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, MemoryResponse.class));
+            } catch (Exception ignored) {}
+        }
+
+        List<Memory> memories = memoryRepository.findTop10ByOrderByCreatedAtDesc();
+        List<MemoryResponse> list = memories.stream()
+                .limit(limit)
+                .map(MemoryResponse::from)
+                .toList();
+
+        try {
+            redisService.cacheRecentMemories(objectMapper.writeValueAsString(list));
+        } catch (Exception ignored) {}
+
+        return list;
+    }
+
+    @Transactional(readOnly = true)
     public MemoryResponse getById(String id) {
         Memory memory = memoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Memory not found: " + id));
@@ -61,5 +91,6 @@ public class MemoryService {
     @Transactional
     public void delete(String id) {
         memoryRepository.deleteById(id);
+        redisService.evictRecentMemories();
     }
 }

@@ -1,4 +1,4 @@
-﻿package com.pensieve.dto;
+package com.pensieve.dto;
 
 import com.pensieve.entity.Memory;
 import lombok.AllArgsConstructor;
@@ -22,6 +22,7 @@ public class MemoryResponse {
     private String filePath;
     private String sentiment;
     private Double sentimentScore;
+    private String processingStatus;
     private List<String> tags;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -36,6 +37,7 @@ public class MemoryResponse {
                 .filePath(m.getFilePath())
                 .sentiment(m.getSentiment() != null ? m.getSentiment().name() : null)
                 .sentimentScore(m.getSentimentScore())
+                .processingStatus(m.getProcessingStatus() != null ? m.getProcessingStatus().name() : null)
                 .tags(m.getTags())
                 .createdAt(m.getCreatedAt())
                 .updatedAt(m.getUpdatedAt())

@@ -1,4 +1,4 @@
-﻿package com.pensieve.repository;
+package com.pensieve.repository;
 
 import com.pensieve.entity.Memory;
 import org.springframework.data.domain.Page;

@@ -1,4 +1,4 @@
-﻿package com.pensieve.dto;
+package com.pensieve.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

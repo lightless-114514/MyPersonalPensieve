@@ -1,4 +1,4 @@
-﻿package com.pensieve.config;
+package com.pensieve.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

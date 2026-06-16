@@ -1,10 +1,10 @@
-﻿# MyPersonalPensieve 🧠
+# MyPersonalPensieve 🧠
 
 > AI 个人记忆系统 — 记录、整理、检索你的思想与知识。
 
 ## 技术栈
 
-### 后端 (Python) — `v2-python` 分支
+### 后端 (Python) — `python-main` 分支
 
 | 类别 | 技术 |
 |------|------|
@@ -17,9 +17,7 @@
 | LLM 集成 | **LangChain** + **OpenAI** |
 | 环境管理 | **uv / pip** |
 
-### Java 版本 (旧版)
-
-Java (Spring Boot) 版本保留在 [`main`](https://github.com/lightless-114514/MyPersonalPensieve/tree/main) 分支。
+### Java 版本java 分支 — [Spring Boot 旧版](https://github.com/lightless-114514/MyPersonalPensieve/tree/java)
 
 ### 前端
 

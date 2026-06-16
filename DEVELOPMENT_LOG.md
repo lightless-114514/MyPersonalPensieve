@@ -115,3 +115,54 @@ MyPersonalPensieve/
 ├── docker-compose.yml      # Redis + MySQL + Qdrant
 └── application.yml         # default (MySQL) + dev (H2) profiles
 ```
+---
+
+## 2026-06-16 — 后端重构：Spring Boot (Java) → FastAPI (Python)
+
+### 理由
+
+部分功能（如 LLM 集成、向量搜索、AI 代理）在 Python 生态中更成熟，Java 的 LangChain4j 等库版本滞后、社区支持较弱。尝试 Python 技术栈，利用 FastAPI + LangChain + Qdrant 的原生 Python 客户端，降低 AI 相关功能的接入成本。
+
+### 完成事项
+
+| 事项 | 说明 |
+|------|------|
+| 创建 `python-main` 分支 | 默认分支，`java` 分支保留 Spring Boot 旧版 |
+| 删除所有 Java 文件 | `backend/src/main/java/` + `pom.xml` |
+| Web 框架 | Spring Boot → **FastAPI** (异步) |
+| ORM | JPA/Hibernate → **SQLAlchemy** (异步模式) |
+| 数据库迁移 | ddl-auto:update → **Alembic** |
+| Redis | Jedis/Lettuce → **redis-py** 异步 |
+| Qdrant | Java Client → **qdrant-client** (Python) |
+| LLM | LangChain4j → **LangChain** (Python) + OpenAI |
+| Dockerfile | Java 17 → **Python 3.12-slim** |
+| docker-compose.yml | 新增 backend 构建服务 |
+
+### API 接口（完全兼容前端）
+
+| 方法 | 路径 | 状态 |
+|------|------|------|
+| POST | `/api/memories` | ✅ |
+| GET | `/api/memories` | ✅ 分页 |
+| GET | `/api/memories/recent` | ✅ |
+| GET | `/api/memories/{id}` | ✅ |
+| DELETE | `/api/memories/{id}` | ✅ |
+| GET | `/api/health` | ✅ |
+
+### 服务容错
+
+- OpenAI 客户端：懒加载，无 API key 时不影响启动
+- Qdrant 客户端：懒加载，未连接时不影响启动
+- Redis 操作：try/except 包裹，未运行时优雅降级（跳过限流/缓存）
+
+### 运行方式
+
+```bash
+# 后端
+cd backend
+.venv\Scripts\uvicorn.exe app.main:app --reload --port 8080
+
+# 前端（不变）
+cd frontend
+npm run dev
+```

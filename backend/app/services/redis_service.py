@@ -1,4 +1,4 @@
-﻿import redis.asyncio as aioredis
+import redis.asyncio as aioredis
 from app.config import settings
 from typing import Optional
 
@@ -21,16 +21,25 @@ class RedisService:
     KEY_RATE_PREFIX = "rate:ask:"
 
     async def cache_recent_memories(self, json_str: str) -> None:
-        r = await self._get_redis()
-        await r.setex(self.KEY_MEMORIES_RECENT, 600, json_str)
+        try:
+            r = await self._get_redis()
+            await r.setex(self.KEY_MEMORIES_RECENT, 600, json_str)
+        except Exception:
+            pass
 
     async def get_recent_memories(self) -> Optional[str]:
-        r = await self._get_redis()
-        return await r.get(self.KEY_MEMORIES_RECENT)
+        try:
+            r = await self._get_redis()
+            return await r.get(self.KEY_MEMORIES_RECENT)
+        except Exception:
+            return None
 
     async def evict_recent_memories(self) -> None:
-        r = await self._get_redis()
-        await r.delete(self.KEY_MEMORIES_RECENT)
+        try:
+            r = await self._get_redis()
+            await r.delete(self.KEY_MEMORIES_RECENT)
+        except Exception:
+            pass
 
     async def add_task_step(self, task_id: str, step: str) -> None:
         r = await self._get_redis()
@@ -48,12 +57,15 @@ class RedisService:
         await r.delete(f"{self.KEY_TASK_PREFIX}{task_id}")
 
     async def is_rate_limited(self, ip: str) -> bool:
-        r = await self._get_redis()
-        key = f"{self.KEY_RATE_PREFIX}{ip}"
-        count = await r.incr(key)
-        if count == 1:
-            await r.expire(key, 60)
-        return count > 60
+        try:
+            r = await self._get_redis()
+            key = f"{self.KEY_RATE_PREFIX}{ip}"
+            count = await r.incr(key)
+            if count == 1:
+                await r.expire(key, 60)
+            return count > 60
+        except Exception:
+            return False
 
     async def get_rate_count(self, ip: str) -> int:
         r = await self._get_redis()

@@ -1,4 +1,4 @@
-﻿import json
+import json
 import math
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -1,13 +1,20 @@
-﻿from openai import AsyncOpenAI
+from openai import AsyncOpenAI
 from app.config import settings
 
 
 class LLMService:
     def __init__(self):
-        self.client = AsyncOpenAI(
-            api_key=settings.openai_api_key,
-        )
-        self.model = settings.openai_model
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = AsyncOpenAI(api_key=settings.openai_api_key)
+        return self._client
+
+    @property
+    def model(self) -> str:
+        return settings.openai_model
 
     async def generate_embedding(self, text: str) -> list[float]:
         response = await self.client.embeddings.create(
@@ -40,7 +47,9 @@ Text: {text}"""
             return {"entities": [], "sentiment": "NEUTRAL", "tags": []}
 
     async def close(self) -> None:
-        await self.client.close()
+        if self._client is not None:
+            await self._client.close()
+            self._client = None
 
 
 llm_service = LLMService()

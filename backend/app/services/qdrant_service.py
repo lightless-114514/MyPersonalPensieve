@@ -1,4 +1,4 @@
-﻿from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient
 from qdrant_client.http import models as qmodels
 from app.config import settings
 from typing import Optional
@@ -6,8 +6,17 @@ from typing import Optional
 
 class QdrantService:
     def __init__(self):
-        self.client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
-        self.collection_name = settings.qdrant_collection_name
+        self._client = None
+
+    @property
+    def client(self):
+        if self._client is None:
+            self._client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+        return self._client
+
+    @property
+    def collection_name(self) -> str:
+        return settings.qdrant_collection_name
 
     async def ensure_collection(self) -> None:
         collections = self.client.get_collections().collections
@@ -25,15 +34,14 @@ class QdrantService:
         self,
         points: list[dict],
     ) -> None:
-        qpoints = []
-        for p in points:
-            qpoints.append(
-                qmodels.PointStruct(
-                    id=p["id"],
-                    vector=p["vector"],
-                    payload=p.get("payload", {}),
-                )
+        qpoints = [
+            qmodels.PointStruct(
+                id=p["id"],
+                vector=p["vector"],
+                payload=p.get("payload", {}),
             )
+            for p in points
+        ]
         self.client.upsert(collection_name=self.collection_name, points=qpoints)
 
     def search(
@@ -49,11 +57,7 @@ class QdrantService:
             score_threshold=score_threshold,
         )
         return [
-            {
-                "id": r.id,
-                "score": r.score,
-                "payload": r.payload,
-            }
+            {"id": r.id, "score": r.score, "payload": r.payload}
             for r in results
         ]
 
@@ -64,7 +68,9 @@ class QdrantService:
         )
 
     def close(self) -> None:
-        self.client.close()
+        if self._client is not None:
+            self.client.close()
+            self._client = None
 
 
 qdrant_service = QdrantService()

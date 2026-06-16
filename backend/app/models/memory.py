@@ -1,10 +1,10 @@
-﻿import uuid
+import uuid
 from datetime import datetime
 from sqlalchemy import (
-    Column, String, Text, Float, DateTime, ForeignKey, Table, UniqueConstraint, Enum as SAEnum
+    String, Text, Float, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy.dialects.mysql import CHAR
+
 from app.db.session import Base
 import enum
 
@@ -39,18 +39,10 @@ class EntityType(str, enum.Enum):
     OTHER = "OTHER"
 
 
-memory_tags = Table(
-    "memory_tags",
-    Base.metadata,
-    Column("memory_id", CHAR(36), ForeignKey("memories.id", ondelete="CASCADE"), primary_key=True),
-    Column("tag", String(100), primary_key=True),
-)
-
-
 class Memory(Base):
     __tablename__ = "memories"
 
-    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[MemoryType] = mapped_column(SAEnum(MemoryType), nullable=False, default=MemoryType.TEXT)
@@ -66,21 +58,21 @@ class Memory(Base):
         DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    tags: Mapped[list[str]] = relationship("MemoryTag", cascade="all, delete-orphan")
+    tags: Mapped[list["MemoryTag"]] = relationship("MemoryTag", cascade="all, delete-orphan")
     memory_entities: Mapped[list["MemoryEntity"]] = relationship("MemoryEntity", back_populates="memory", cascade="all, delete-orphan")
 
 
 class MemoryTag(Base):
     __tablename__ = "memory_tags"
 
-    memory_id: Mapped[str] = mapped_column(CHAR(36), ForeignKey("memories.id", ondelete="CASCADE"), primary_key=True)
+    memory_id: Mapped[str] = mapped_column(String(36), ForeignKey("memories.id", ondelete="CASCADE"), primary_key=True)
     tag: Mapped[str] = mapped_column(String(100), primary_key=True)
 
 
 class KnowledgeEntity(Base):
     __tablename__ = "entities"
 
-    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     type: Mapped[EntityType] = mapped_column(SAEnum(EntityType), nullable=False)
 
@@ -93,9 +85,9 @@ class MemoryEntity(Base):
         UniqueConstraint("memory_id", "entity_id"),
     )
 
-    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    memory_id: Mapped[str] = mapped_column(CHAR(36), ForeignKey("memories.id", ondelete="CASCADE"), nullable=False)
-    entity_id: Mapped[str] = mapped_column(CHAR(36), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    memory_id: Mapped[str] = mapped_column(String(36), ForeignKey("memories.id", ondelete="CASCADE"), nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(36), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False)
 
     memory: Mapped["Memory"] = relationship("Memory", back_populates="memory_entities")
     entity: Mapped["KnowledgeEntity"] = relationship("KnowledgeEntity", back_populates="memory_entities")
@@ -104,11 +96,11 @@ class MemoryEntity(Base):
 class Relation(Base):
     __tablename__ = "relations"
 
-    id: Mapped[str] = mapped_column(CHAR(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    source_entity_id: Mapped[str] = mapped_column(CHAR(36), ForeignKey("entities.id"), nullable=False)
-    target_entity_id: Mapped[str] = mapped_column(CHAR(36), ForeignKey("entities.id"), nullable=False)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    source_entity_id: Mapped[str] = mapped_column(String(36), ForeignKey("entities.id"), nullable=False)
+    target_entity_id: Mapped[str] = mapped_column(String(36), ForeignKey("entities.id"), nullable=False)
     relation_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    memory_id: Mapped[str | None] = mapped_column(CHAR(36), ForeignKey("memories.id"), nullable=True)
+    memory_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("memories.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
     source_entity: Mapped["KnowledgeEntity"] = relationship("KnowledgeEntity", foreign_keys=[source_entity_id])

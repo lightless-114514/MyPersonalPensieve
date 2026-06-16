@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, Request, HTTPException, Query
+from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.memory import MemoryRequest, MemoryResponse, PagedResponse

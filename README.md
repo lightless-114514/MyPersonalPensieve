@@ -1,10 +1,10 @@
-# MyPersonalPensieve 🧠
+# MyPersonalPensieve 
 
 > AI 个人记忆系统 — 记录、整理、检索你的思想与知识。
 
 ## 技术栈
 
-### 后端 (Python) — `python-main` 分支
+### 后端 (Python) — python-main 分支（默认）
 
 | 类别 | 技术 |
 |------|------|
@@ -17,7 +17,9 @@
 | LLM 集成 | **LangChain** + **OpenAI** |
 | 环境管理 | **uv / pip** |
 
-### Java 版本java 分支 — [Spring Boot 旧版](https://github.com/lightless-114514/MyPersonalPensieve/tree/java)
+### Java 版本（旧版）
+
+java 分支保留 [Spring Boot 旧版](https://github.com/lightless-114514/MyPersonalPensieve/tree/java)。
 
 ### 前端
 
@@ -38,42 +40,43 @@
 
 ### 开发环境
 
-```bash
+`ash
 # 1. 启动基础设施
 docker compose up -d mysql redis qdrant
 
-# 2. 启动后端
+# 2. 后端
 cd backend
-pip install -e ".[dev]"
-alembic upgrade head
-uvicorn app.main:app --reload --port 8080
+python -m venv .venv
+.venv/Scripts/pip install fastapi uvicorn[standard] sqlalchemy[asyncio] asyncmy pymysql alembic pydantic pydantic-settings redis[hiredis] qdrant-client openai python-multipart sse-starlette langchain langchain-openai
+alembic stamp head
+.venv/Scripts/uvicorn.exe app.main:app --reload --port 8080
 
-# 3. 启动前端
+# 3. 前端
 cd frontend
 npm install
 npm run dev
-```
+`
 
 ### 生产部署
 
-```bash
+`ash
 docker compose up -d
-```
+`
 
 ## API 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/memories` | 创建记忆 |
-| GET | `/api/memories` | 分页获取记忆 |
-| GET | `/api/memories/recent` | 获取最近记忆 |
-| GET | `/api/memories/{id}` | 获取单条记忆 |
-| DELETE | `/api/memories/{id}` | 删除记忆 |
-| GET | `/api/health` | 健康检查 |
+| POST | \/api/memories\ | 创建记忆 |
+| GET | \/api/memories\ | 分页获取记忆 |
+| GET | \/api/memories/recent\ | 获取最近记忆 |
+| GET | \/api/memories/{id}\ | 获取单条记忆 |
+| DELETE | \/api/memories/{id}\ | 删除记忆 |
+| GET | \/api/health\ | 健康检查 |
 
 ## 项目结构
 
-```
+`
 ├── backend/              # Python FastAPI 后端
 │   ├── app/
 │   │   ├── main.py       # FastAPI 应用入口
@@ -88,8 +91,16 @@ docker compose up -d
 │   └── pyproject.toml
 ├── frontend/             # Vue 3 前端
 ├── docker-compose.yml
+├── DEVELOPMENT_LOG.md
 └── README.md
-```
+`
+
+## 分支说明
+
+| 分支 | 说明 |
+|------|------|
+| \python-main\ | 默认分支 — FastAPI Python 后端 |
+| \java\ | Spring Boot Java 后端（存档） |
 
 ## 许可证
 

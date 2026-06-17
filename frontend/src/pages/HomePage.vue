@@ -1,15 +1,12 @@
-﻿<script setup lang="ts">
-import { useMemoryStore } from '@/stores/memory'
+<script setup lang="ts">
 import { useQuery } from '@tanstack/vue-query'
-import { searchMemories } from '@/api'
+import { getRecentMemories } from '@/api'
 import { formatDate, typeIcon, sentimentColor } from '@/lib/utils'
 import { Brain, ArrowRight } from 'lucide-vue-next'
 
-const memoryStore = useMemoryStore()
-
-const { data } = useQuery({
-  queryKey: ['memories', { page: 0, size: 10 }],
-  queryFn: () => searchMemories({ query: '', page: 0, size: 10 }),
+const { data: memories, isLoading } = useQuery({
+  queryKey: ['recent-memories'],
+  queryFn: () => getRecentMemories(10),
 })
 </script>
 
@@ -32,11 +29,11 @@ const { data } = useQuery({
     </div>
 
     <!-- Recent memories -->
-    <div v-if="data?.content?.length">
+    <div v-if="memories?.length">
       <h2 class="text-lg font-semibold mb-4">最近的记忆</h2>
       <div class="grid gap-3">
         <router-link
-          v-for="m in data.content"
+          v-for="m in memories"
           :key="m.id"
           :to="`/memories/${m.id}`"
           class="block p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
@@ -65,8 +62,10 @@ const { data } = useQuery({
     </div>
 
     <!-- Empty state -->
-    <div v-else class="text-center py-16">
+    <div v-else-if="!isLoading" class="text-center py-16">
       <p class="text-muted-foreground">还没有记忆。开始记录你的第一条吧 ✨</p>
     </div>
+
+    <div v-else class="text-center py-12 text-muted-foreground">加载中...</div>
   </div>
 </template>

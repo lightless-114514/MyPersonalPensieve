@@ -1,21 +1,17 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { searchMemories, createMemory } from '@/api'
-import { useMemoryStore } from '@/stores/memory'
+import { getMemories, createMemory } from '@/api'
 import { formatDate, typeIcon, sentimentColor } from '@/lib/utils'
 import { Search, Plus, X, Loader2 } from 'lucide-vue-next'
-import type { Memory, ProcessingProgress } from '@/types'
 
 const route = useRoute()
 const queryClient = useQueryClient()
 
-const searchText = ref('')
 const page = ref(0)
 const showCreate = ref(route.query.new === 'true')
 const isUploading = ref(false)
-const uploadProgress = ref<ProcessingProgress | null>(null)
 
 // Create form
 const createForm = ref({
@@ -27,25 +23,28 @@ const createForm = ref({
 })
 
 const { data, isLoading } = useQuery({
-  queryKey: ['memories', { query: searchText.value, page: page.value }],
-  queryFn: () => searchMemories({ query: searchText.value, page: page.value, size: 20 }),
+  queryKey: ['memories', page.value],
+  queryFn: () => getMemories({ page: page.value, size: 20 }),
 })
 
 const createMutation = useMutation({
   mutationFn: async () => {
     isUploading.value = true
-    const formData = new FormData()
-    formData.append('title', createForm.value.title)
-    formData.append('content', createForm.value.content)
-    formData.append('type', createForm.value.type)
-    if (createForm.value.sourceUrl) formData.append('sourceUrl', createForm.value.sourceUrl)
-    if (createForm.value.tags) {
-      createForm.value.tags.split(',').forEach((t) => formData.append('tags', t.trim()))
+    const tags = createForm.value.tags
+      ? createForm.value.tags.split(',').map((t) => t.trim()).filter(Boolean)
+      : []
+    const payload: any = {
+      title: createForm.value.title.trim(),
+      content: createForm.value.content.trim(),
+      type: createForm.value.type,
+      tags,
     }
-    return createMemory(formData)
+    if (createForm.value.sourceUrl) payload.source_url = createForm.value.sourceUrl.trim()
+    return createMemory(payload)
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['memories'] })
+    queryClient.invalidateQueries({ queryKey: ['recent-memories'] })
     showCreate.value = false
     isUploading.value = false
     resetForm()
@@ -59,12 +58,7 @@ function resetForm() {
   createForm.value = { title: '', content: '', type: 'TEXT', sourceUrl: '', tags: '' }
 }
 
-function onSearch() {
-  page.value = 0
-  queryClient.invalidateQueries({ queryKey: ['memories'] })
-}
-
-const totalPages = computed(() => data.value?.totalPages ?? 1)
+const totalPages = computed(() => data.value?.total_pages ?? 1)
 </script>
 
 <template>
@@ -134,17 +128,6 @@ const totalPages = computed(() => data.value?.totalPages ?? 1)
           保存记忆
         </button>
       </div>
-    </div>
-
-    <!-- Search -->
-    <div class="relative">
-      <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-      <input
-        v-model="searchText"
-        @keyup.enter="onSearch"
-        placeholder="搜索记忆..."
-        class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-      />
     </div>
 
     <!-- List -->

@@ -1,23 +1,30 @@
-﻿export interface Memory {
+export interface Memory {
   id: string
   title: string
   content: string
   type: 'TEXT' | 'IMAGE' | 'AUDIO' | 'LINK'
+  source_url?: string | null
+  file_path?: string | null
+  sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | null
+  sentiment_score?: number | null
+  processing_status: string
+  tags: string[]
+  created_at: string
+  updated_at: string
+  // convenience aliases
   sourceUrl?: string
   filePath?: string
-  sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL'
   sentimentScore?: number
-  entities: Entity[]
-  tags: string[]
-  createdAt: string
-  updatedAt: string
+  processingStatus?: string
+  createdAt?: string
+  updatedAt?: string
+  entities?: Entity[]
 }
 
 export interface Entity {
   id: string
   name: string
-  type: 'PERSON' | 'PLACE' | 'ORG' | 'EVENT' | 'TOPIC' | 'OTHER'
-  relationships: Relationship[]
+  type: 'PERSON' | 'PLACE' | 'ORG' | 'EVENT' | 'TOPIC' | 'TECHNOLOGY' | 'OTHER'
 }
 
 export interface Relationship {
@@ -28,23 +35,14 @@ export interface Relationship {
   strength: number
 }
 
-export interface SearchQuery {
-  query: string
-  type?: string
-  sentiment?: string
-  tags?: string[]
-  entities?: string[]
-  startDate?: string
-  endDate?: string
-  page?: number
-  size?: number
-}
-
 export interface SearchResult {
   content: Memory[]
-  totalElements: number
-  totalPages: number
+  total_elements: number
+  total_pages: number
   page: number
+  size: number
+  last: boolean
+  first: boolean
 }
 
 export interface KnowledgeGraph {

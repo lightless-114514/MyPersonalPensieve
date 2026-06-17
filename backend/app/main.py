@@ -2,14 +2,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routes import memories
+from app.routes import memories, analytics
 from app.services.redis_service import redis_service
 from app.services.qdrant_service import qdrant_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: ensure Qdrant collection exists
     try:
         await qdrant_service.ensure_collection()
     except Exception:
@@ -17,7 +16,6 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Shutdown: close connections
     try:
         await redis_service.close()
     except Exception:
@@ -44,6 +42,7 @@ app.add_middleware(
 )
 
 app.include_router(memories.router)
+app.include_router(analytics.router)
 
 
 @app.get("/api/health")

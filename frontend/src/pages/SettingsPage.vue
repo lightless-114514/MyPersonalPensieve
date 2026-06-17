@@ -35,8 +35,8 @@ function saveSettings() {
           >
             <span
               :class="[
-                'absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200',
-                settings.darkMode ? 'translate-x-5.5' : 'translate-x-0.5',
+                'absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                settings.darkMode ? 'translate-x-[22px]' : 'translate-x-0.5',
               ]"
             ></span>
           </button>

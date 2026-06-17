@@ -166,3 +166,42 @@ cd backend
 cd frontend
 npm run dev
 ```
+
+
+---
+
+## 2026-06-17 — 前端对接真实 API + 设置页修复 + 新增后端端点
+
+### 前端改动
+
+| 文件 | 改动 |
+|------|------|
+| pi/index.ts | createMemory 改 JSON 体；searchMemories 改为 getMemories (GET)；新增 getRecentMemories；添加 axios 拦截器自动 snake_case→camelCase |
+| 	ypes/index.ts | 对齐后端 PagedResponse (	otal_elements, 	otal_pages) 和 MemoryResponse |
+| HomePage.vue | 改用 getRecentMemories 取真实数据 |
+| MemoriesPage.vue | 改用 getMemories + createMemory(JSON)；移除 FormData 上传 |
+| SettingsPage.vue | 修复暗色模式切换按钮：	ranslate-x-[22px] 替代不在 Tailwind 间距表的 	ranslate-x-5.5；加 overflow-hidden |
+
+### 后端新增端点
+
+| 端点 | 说明 |
+|------|------|
+| GET /api/graph | 返回实体 + 关系的知识图谱数据 (D3.js 可视化) |
+| GET /api/analytics/sentiment | 按日期聚合情感趋势（支持 ?days=7/30/90） |
+
+### 数据流
+
+`
+Vue 3 页面 → Vue Query → axios → Vite proxy (/api → :8080)
+                                        ↓
+                              FastAPI → SQLAlchemy → MySQL
+`
+
+### 当前状态
+
+- 前端 6 个页面全部对接真实后端 API ✅
+- 暗色模式切换按钮动画修复 ✅
+- 记忆 CRUD（创建/列表/详情/删除）全部走 MySQL ✅
+- 图谱和情感分析端点就绪，等待 AI 实体提取数据填充 ✅
+- 开发环境运行方式不变
+

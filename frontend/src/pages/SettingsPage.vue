@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings'
 import { ref } from 'vue'
 import { Save } from 'lucide-vue-next'
@@ -26,17 +26,17 @@ function saveSettings() {
             <p class="text-sm font-medium">暗色模式</p>
             <p class="text-xs text-muted-foreground">切换暗色/亮色主题</p>
           </div>
-          <button
+                    <button
             @click="settings.toggleDarkMode()"
             :class="[
-              'relative w-11 h-6 rounded-full transition-colors',
+              'relative w-11 h-6 rounded-full transition-colors duration-200',
               settings.darkMode ? 'bg-primary' : 'bg-border',
             ]"
           >
             <span
               :class="[
-                'absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform shadow-sm',
-                settings.darkMode ? 'translate-x-5.5' : 'translate-x-0.5',
+                'absolute top-[2px] h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200',
+                settings.darkMode ? 'translate-x-[22px]' : 'translate-x-[2px]',
               ]"
             ></span>
           </button>

@@ -17,17 +17,9 @@ class EntityExtractionResult(BaseModel):
 
 
 PROVIDER_DEFAULTS = {
-    "openai": {
-        "base_url": "",
-        "model": "gpt-4o-mini",
-    },
     "deepseek": {
-        "base_url": "https://api.deepseek.com/v1",
-        "model": "deepseek-chat",
-    },
-    "zhipu": {
-        "base_url": "https://open.bigmodel.cn/api/paas/v4",
-        "model": "glm-4-flash",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-v4-flash",
     },
 }
 

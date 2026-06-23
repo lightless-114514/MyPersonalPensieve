@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings
 
 def _default_data_dir() -> str:
     """返回桌面端数据目录。
-
     优先顺序：
     1. 环境变量 PENSIEVE_DATA_DIR（开发/打包后由 Electron 注入）
     2. 打包模式下：可执行文件同级目录的 data 文件夹
@@ -17,7 +16,6 @@ def _default_data_dir() -> str:
         return str(Path(env).expanduser().resolve())
 
     if getattr(sys, "frozen", False):
-        # PyInstaller 打包后：可执行文件同级目录
         return str(Path(sys.executable).parent / "data")
 
     return str(Path(__file__).resolve().parent.parent / "data")
@@ -30,36 +28,36 @@ class Settings(BaseSettings):
     server_host: str = "127.0.0.1"
     debug: bool = False
 
-    # Data directory（桌面端统一数据存放位置）
+    # Data directory
     data_dir: str = _default_data_dir()
 
     # SQLite（替代 MySQL）
-    sqlite_path: str = ""  # 留空则使用 data_dir/pensieve.db
+    sqlite_path: str = ""
 
     @property
     def database_url(self) -> str:
-        """异步 SQLAlchemy URL。"""
         path = self.sqlite_path or str(Path(self.data_dir) / "pensieve.db")
         Path(self.data_dir).mkdir(parents=True, exist_ok=True)
         return f"sqlite+aiosqlite:///{path}"
 
     @property
     def database_url_sync(self) -> str:
-        """同步 SQLAlchemy URL（alembic 使用）。"""
         path = self.sqlite_path or str(Path(self.data_dir) / "pensieve.db")
         Path(self.data_dir).mkdir(parents=True, exist_ok=True)
         return f"sqlite:///{path}"
 
     # ChromaDB（替代 Qdrant）
-    chroma_persist_dir: str = ""  # 留空则使用 data_dir/chroma
+    chroma_persist_dir: str = ""
     chroma_collection_name: str = "pensieve_memories"
 
-    # OpenAI
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    # LLM Provider
+    llm_provider: str = "deepseek"
+    llm_api_key: str = ""
+    llm_base_url: str = ""
+    llm_model: str = "deepseek-v4-flash"
 
     # Upload
-    upload_dir: str = ""  # 留空则使用 data_dir/uploads
+    upload_dir: str = ""
 
     @property
     def upload_dir_resolved(self) -> str:

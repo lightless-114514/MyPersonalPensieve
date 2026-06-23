@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
   SearchResult,
@@ -23,12 +24,20 @@ function convertKeys(obj: any): any {
   return obj
 }
 
-// 桌面端打包后使用完整 URL（http://127.0.0.1:8080/api），开发模式用相对路径走 vite proxy
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 30000,
+})
+
+// 自动附带 API Key（从设置页的 localStorage 读取）
+api.interceptors.request.use((config) => {
+  const settings = useSettingsStore()
+  if (settings.apiKey) {
+    config.headers['X-API-Key'] = settings.apiKey
+  }
+  return config
 })
 
 api.interceptors.response.use((response) => {
@@ -38,30 +47,18 @@ api.interceptors.response.use((response) => {
   return response
 })
 
-// Memories
-export async function createMemory(payload: {
-  title: string
-  content: string
-  type: string
-  sourceUrl?: string
-  tags?: string[]
-}) {
+export async function createMemory(payload: any) {
   const { data } = await api.post<Memory>('/memories', payload)
   return data
 }
 
-export async function getMemories(params: {
-  page?: number
-  size?: number
-}) {
+export async function getMemories(params: { page?: number; size?: number }) {
   const { data } = await api.get<SearchResult>('/memories', { params })
   return data
 }
 
 export async function getRecentMemories(limit: number = 10) {
-  const { data } = await api.get<Memory[]>('/memories/recent', {
-    params: { limit },
-  })
+  const { data } = await api.get<Memory[]>('/memories/recent', { params: { limit } })
   return data
 }
 
@@ -74,21 +71,16 @@ export async function deleteMemory(id: string) {
   await api.delete(`/memories/${id}`)
 }
 
-// Knowledge Graph
 export async function getKnowledgeGraph() {
   const { data } = await api.get<KnowledgeGraph>('/graph')
   return data
 }
 
-// Sentiment
 export async function getSentimentTrend(days: number = 30) {
-  const { data } = await api.get<SentimentTrend[]>('/analytics/sentiment', {
-    params: { days },
-  })
+  const { data } = await api.get<SentimentTrend[]>('/analytics/sentiment', { params: { days } })
   return data
 }
 
-// SSE progress
 export function subscribeProgress(
   taskId: string,
   onProgress: (p: ProcessingProgress) => void,

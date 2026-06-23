@@ -4,6 +4,13 @@ from app.db.session import get_db
 from app.schemas.memory import MemoryRequest, MemoryResponse, PagedResponse
 from app.services.memory_service import memory_service
 from app.services.redis_service import redis_service
+from app.services.llm_service import llm_service
+from fastapi import Header
+from typing import Optional
+
+async def get_api_key(x_api_key: Optional[str] = Header(None)) -> Optional[str]:
+    llm_service.set_api_key(x_api_key)
+    return x_api_key
 
 router = APIRouter(prefix="/api/memories", tags=["memories"])
 

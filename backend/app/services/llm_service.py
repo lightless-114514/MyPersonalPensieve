@@ -16,6 +16,22 @@ class EntityExtractionResult(BaseModel):
     tags: list[str] = Field(description="关键词标签")
 
 
+PROVIDER_DEFAULTS = {
+    "openai": {
+        "base_url": "",
+        "model": "gpt-4o-mini",
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "model": "deepseek-chat",
+    },
+    "zhipu": {
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "model": "glm-4-flash",
+    },
+}
+
+
 class LLMService:
     def __init__(self):
         self._llm = None
@@ -25,7 +41,7 @@ class LLMService:
 
     @property
     def api_key(self) -> str:
-        return self._active_key or settings.openai_api_key
+        return self._active_key or settings.llm_api_key
 
     def set_api_key(self, key: Optional[str]) -> None:
         if key and key != self._active_key:
@@ -35,24 +51,40 @@ class LLMService:
             self._extractor = None
 
     @property
+    def provider(self) -> str:
+        return settings.llm_provider
+
+    @property
     def model(self) -> str:
-        return settings.openai_model
+        provider_defaults = PROVIDER_DEFAULTS.get(self.provider, {})
+        return settings.llm_model or provider_defaults.get("model", "gpt-4o-mini")
+
+    @property
+    def base_url(self) -> str:
+        provider_defaults = PROVIDER_DEFAULTS.get(self.provider, {})
+        return settings.llm_base_url or provider_defaults.get("base_url", "")
 
     def _get_llm(self) -> ChatOpenAI:
         if self._llm is None:
-            self._llm = ChatOpenAI(
-                api_key=self.api_key,
-                model=self.model,
-                temperature=0.3,
-            )
+            kwargs = {
+                "api_key": self.api_key,
+                "model": self.model,
+                "temperature": 0.3,
+            }
+            if self.base_url:
+                kwargs["base_url"] = self.base_url
+            self._llm = ChatOpenAI(**kwargs)
         return self._llm
 
     def _get_embeddings(self) -> OpenAIEmbeddings:
         if self._embeddings is None:
-            self._embeddings = OpenAIEmbeddings(
-                api_key=self.api_key,
-                model="text-embedding-3-small",
-            )
+            kwargs = {
+                "api_key": self.api_key,
+                "model": "text-embedding-3-small",
+            }
+            if self.base_url and self.provider != "openai":
+                kwargs["base_url"] = self.base_url
+            self._embeddings = OpenAIEmbeddings(**kwargs)
         return self._embeddings
 
     @property

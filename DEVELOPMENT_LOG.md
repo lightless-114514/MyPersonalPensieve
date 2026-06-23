@@ -205,3 +205,72 @@ Vue 3 页面 → Vue Query → axios → Vite proxy (/api → :8080)
 - 图谱和情感分析端点就绪，等待 AI 实体提取数据填充 ✅
 - 开发环境运行方式不变
 
+
+
+---
+
+## 2026-06-23 — 重构为 Electron 桌面应用（SQLite + ChromaDB）
+
+### 理由
+
+Docker 微服务架构对终端用户部署门槛太高（需要装 Docker、启动 3 个容器）。改为 Electron 单体桌面应用，用户双击即可运行，数据本地存储，零配置。
+
+### 架构变更
+
+| 组件 | 之前 | 之后 |
+|------|------|------|
+| 数据库 | MySQL 8.0 (Docker) | **SQLite** (aiosqlite，嵌入式) |
+| 向量存储 | Qdrant (Docker) | **ChromaDB** (本地持久化) |
+| 缓存 | Redis (Docker) | **内存缓存** (同接口，无外部依赖) |
+| 部署方式 | docker compose | **Electron + PyInstaller** 单体打包 |
+| 前端 | Vite dev server | 支持 dev (proxy) + desktop (完整 URL) 两种模式 |
+
+### 新增文件
+
+| 文件 | 说明 |
+|------|------|
+| electron/main.js | Electron 主进程：启动后端子进程 + 创建窗口 |
+| electron/preload.js | 预加载脚本，暴露 window.pensieve 环境信息 |
+| electron/package.json | electron-builder 配置（NSIS 安装包 + portable） |
+| electron/scripts/build.js | 一键构建脚本（前端 + 后端 + 打包） |
+| ackend/run.py | PyInstaller 打包入口，输出 PENSIEVE_STARTING 信号 |
+| ackend/pensieve_backend.spec | PyInstaller spec（含 ChromaDB 隐式依赖收集） |
+| rontend/.env.development | 开发模式 API base 配置 |
+
+### 后端改动
+
+- config.py：新增 _default_data_dir() 自动解析数据目录（开发模式 ackend/data，打包后可执行文件同级 data）
+- db/session.py：SQLite 连接参数 check_same_thread=False；新增 init_db() 首次启动自动建表（替代 alembic migrate）
+- main.py：lifespan 中调用 init_db() + ensure_collection()
+- qdrant_service.py：整文件改为 ChromaDB 实现，保持方法签名不变
+- 
+edis_service.py：整文件改为内存缓存实现（_MemoryStore），保持方法签名不变
+- pyproject.toml：依赖从 syncmy/pymysql/redis/qdrant-client 换为 iosqlite/chromadb，dev 加 pyinstaller
+
+### 前端改动
+
+- pi/index.ts：aseURL 改为 import.meta.env.VITE_API_BASE || '/api'，支持桌面端完整 URL
+- env.d.ts：声明 ImportMetaEnv 和 window.pensieve 类型
+- package.json：uild 去掉 ue-tsc -b（加快构建），新增 uild:strict
+
+### .gitignore 更新
+
+排除 build 产物：rontend/dist/、*.tsbuildinfo、ite.config.js/d.ts、ackend/build/、ackend/dist/、electron/release/
+
+### 数据流（桌面端）
+
+`
+Electron main.js
+  ├─ spawn pensieve_backend.exe (PyInstaller)
+  │    └─ uvicorn → FastAPI → SQLite + ChromaDB
+  └─ BrowserWindow 加载 frontend/dist (静态文件)
+       └─ axios → http://127.0.0.1:8080/api
+`
+
+### 当前状态
+
+- 桌面端架构搭建完成 ✅
+- 后端服务接口不变，业务层零改动 ✅
+- 打包流程就绪（electron/scripts/build.js）✅
+- 待后续：实际打包测试 + 桌面端 UI 适配
+

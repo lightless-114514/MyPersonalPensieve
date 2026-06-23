@@ -23,8 +23,11 @@ function convertKeys(obj: any): any {
   return obj
 }
 
+// 桌面端打包后使用完整 URL（http://127.0.0.1:8080/api），开发模式用相对路径走 vite proxy
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE,
   timeout: 30000,
 })
 
@@ -91,7 +94,7 @@ export function subscribeProgress(
   onProgress: (p: ProcessingProgress) => void,
   onError: (e: Event) => void
 ) {
-  const es = new EventSource(`/api/memories/progress/${taskId}`)
+  const es = new EventSource(`${API_BASE}/memories/progress/${taskId}`)
   es.onmessage = (event) => {
     const progress: ProcessingProgress = JSON.parse(event.data)
     onProgress(progress)

@@ -1,4 +1,4 @@
-﻿# Build
+# Build
 target/
 dist/
 node_modules/
@@ -33,3 +33,24 @@ backend/uploads/
 # Python
 __pycache__/
 *.pyc
+
+# Desktop build artifacts
+backend/build/
+backend/dist/
+backend/data/
+electron/release/
+electron/node_modules/
+electron/build/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+frontend/tsconfig.node.tsbuildinfo
+*.tsbuildinfo
+
+# Vite config compiled
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# PyInstaller
+backend/pensieve_backend.spec

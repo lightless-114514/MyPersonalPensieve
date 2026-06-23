@@ -1,0 +1,81 @@
+{
+  "name": "pensieve-desktop",
+  "version": "2.0.0",
+  "description": "MyPersonalPensieve - AI 个人记忆系统桌面版",
+  "main": "main.js",
+  "author": "MyPersonalPensieve",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "start:dev": "cross-env PENSIEVE_DEV=1 electron .",
+    "build:frontend": "cd ../frontend && npm install && npm run build",
+    "build:backend": "cd ../backend && pyinstaller pensieve_backend.spec --noconfirm --clean",
+    "build:all": "node scripts/build.js",
+    "dist": "electron-builder --win",
+    "dist:portable": "electron-builder --win portable",
+    "dist:nsis": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "electron-log": "^5.2.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.pensieve.desktop",
+    "productName": "Pensieve",
+    "copyright": "Copyright © 2026 MyPersonalPensieve",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*",
+      "node_modules/**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,ruby,example,examples,docs,doc}",
+      "!**/.git",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/dist/pensieve_backend",
+        "to": "pensieve_backend",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "frontend",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "Pensieve-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pensieve"
+    },
+    "portable": {
+      "artifactName": "Pensieve-${version}-portable.exe"
+    }
+  }
+}

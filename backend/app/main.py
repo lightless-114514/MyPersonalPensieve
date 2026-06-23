@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
+from app.db.session import init_db
 from app.routes import memories, analytics
 from app.services.redis_service import redis_service
 from app.services.qdrant_service import qdrant_service
@@ -9,10 +10,17 @@ from app.services.qdrant_service import qdrant_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # 初始化 SQLite 表（桌面端首次启动自动建表）
+    try:
+        await init_db()
+    except Exception as e:
+        print(f"[lifespan] init_db failed: {e}")
+
+    # 初始化向量库 collection
     try:
         await qdrant_service.ensure_collection()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[lifespan] ensure_collection failed: {e}")
 
     yield
 

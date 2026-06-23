@@ -16,7 +16,7 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const ROOT = path.join(__dirname, '..');
+const ROOT = path.join(__dirname, '..', '..');
 const FRONTEND = path.join(ROOT, 'frontend');
 const BACKEND = path.join(ROOT, 'backend');
 const ELECTRON = path.join(ROOT, 'electron');

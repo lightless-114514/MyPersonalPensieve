@@ -53,9 +53,9 @@ class Memory(Base):
     processing_status: Mapped[ProcessingStatus] = mapped_column(
         SAEnum(ProcessingStatus), nullable=False, default=ProcessingStatus.PENDING
     )
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
     )
 
     tags: Mapped[list["MemoryTag"]] = relationship("MemoryTag", cascade="all, delete-orphan")
@@ -101,7 +101,7 @@ class Relation(Base):
     target_entity_id: Mapped[str] = mapped_column(String(36), ForeignKey("entities.id"), nullable=False)
     relation_type: Mapped[str] = mapped_column(String(50), nullable=False)
     memory_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("memories.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
 
     source_entity: Mapped["KnowledgeEntity"] = relationship("KnowledgeEntity", foreign_keys=[source_entity_id])
     target_entity: Mapped["KnowledgeEntity"] = relationship("KnowledgeEntity", foreign_keys=[target_entity_id])

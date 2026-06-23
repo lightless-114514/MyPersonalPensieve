@@ -1,4 +1,4 @@
-﻿import { type ClassValue, clsx } from 'clsx'
+import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
@@ -13,10 +13,10 @@ export function formatDate(dateStr: string): string {
   const hours = Math.floor(diff / 3600000)
   const days = Math.floor(diff / 86400000)
 
-  if (minutes < 1) return '刚刚'
-  if (minutes < 60) return `${minutes}分钟前`
-  if (hours < 24) return `${hours}小时前`
-  if (days < 7) return `${days}天前`
+  if (minutes < 1) return '??'
+  if (minutes < 60) return `${minutes}????`
+  if (hours < 24) return `${hours}????`
+  if (days < 7) return `${days}???`
   return d.toLocaleDateString('zh-CN')
 }
 
@@ -45,14 +45,10 @@ export function sentimentBg(sentiment?: string): string {
 export function typeIcon(type: string): string {
   switch (type) {
     case 'TEXT':
-      return '📝'
+      return '??'
     case 'IMAGE':
-      return '🖼️'
-    case 'AUDIO':
-      return '🎙️'
-    case 'LINK':
-      return '🔗'
+      return '???'
     default:
-      return '📄'
+      return '??'
   }
 }

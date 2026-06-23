@@ -12,8 +12,6 @@ import enum
 class MemoryType(str, enum.Enum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
-    AUDIO = "AUDIO"
-    LINK = "LINK"
 
 
 class Sentiment(str, enum.Enum):

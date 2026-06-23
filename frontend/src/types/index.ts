@@ -2,7 +2,7 @@ export interface Memory {
   id: string
   title: string
   content: string
-  type: 'TEXT' | 'IMAGE' | 'AUDIO' | 'LINK'
+  type: 'TEXT' | 'IMAGE'
   source_url?: string | null
   file_path?: string | null
   sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | null

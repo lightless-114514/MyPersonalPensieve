@@ -92,9 +92,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
           class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         >
           <option value="TEXT">📝 文字</option>
-          <option value="LINK">🔗 链接</option>
           <option value="IMAGE">🖼️ 图片</option>
-          <option value="AUDIO">🎙️ 语音</option>
         </select>
 
         <textarea
@@ -104,12 +102,6 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
           class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
         ></textarea>
 
-        <input
-          v-if="createForm.type === 'LINK'"
-          v-model="createForm.sourceUrl"
-          placeholder="https://..."
-          class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-        />
 
         <input
           v-model="createForm.tags"

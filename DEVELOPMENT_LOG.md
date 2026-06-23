@@ -1,3 +1,25 @@
+## 2026-06-23 — 接入 DeepSeek v4-flash & 精简记忆类型
+
+### 理由
+
+国产 API（DeepSeek）在中文场景表现更好，且 OpenAI 兼容协议使得切换成本极低。同时精简记忆类型，语音和链接目前没有实现路径，保留只会造成混淆。
+
+### LLM 接入变更
+
+- `config.py`：默认 provider 改为 `deepseek`，默认模型 `deepseek-v4-flash`
+- `llm_service.py`：新增 `PROVIDER_DEFAULTS` 字典，根据 provider 自动选用 base_url 和模型
+  - DeepSeek: `https://api.deepseek.com` + `deepseek-v4-flash`
+  - 前端设置页填入 API Key 后自动持久化到 localStorage，axios 拦截器自动附加 `X-API-Key` 头
+- `.env.example`：精简为仅 DeepSeek 配置示例
+
+### 记忆类型精简
+
+移除 `AUDIO`（语音）和 `LINK`（链接），仅保留 `TEXT` 和 `IMAGE`：
+- `models/memory.py`：MemoryType 枚举只保留 TEXT / IMAGE
+- `frontend/src/types/index.ts`：type 字段类型同步精简
+- `frontend/src/lib/utils.ts`：typeIcon 只保留 TEXT / IMAGE
+- `frontend/src/pages/MemoriesPage.vue`：下拉选项和 LINK 专属输入框已移除
+
 # MyPersonalPensieve - 开发日志
 
 ## 2026-06-23 — 重构为 Electron 桌面应用（SQLite + ChromaDB）

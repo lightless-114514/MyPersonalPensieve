@@ -3,7 +3,11 @@ import math
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.models.memory import Memory, MemoryTag, MemoryType
+from app.db.session import async_session_factory
+from app.models.memory import (
+    Memory, MemoryTag, MemoryType, Sentiment, EntityType,
+    KnowledgeEntity, MemoryEntity, Relation,
+)
 from app.schemas.memory import MemoryRequest, MemoryResponse, PagedResponse
 from app.services.redis_service import redis_service
 from app.services.qdrant_service import qdrant_service
@@ -22,27 +26,104 @@ class MemoryService:
         db.add(memory)
         await db.flush()
 
-        # Add tags - append directly to memory.tags so they are visible after commit
+        # Add tags - collect tag strings for the response
+        tag_names = []
         for tag in request.tags or []:
-            mt = MemoryTag(memory_id=memory.id, tag=tag)
+            t = tag.strip()
+            if not t:
+                continue
+            mt = MemoryTag(memory_id=memory.id, tag=t)
             db.add(mt)
-            memory.tags.append(mt)
+            tag_names.append(t)
 
         await db.commit()
 
         # Evict cache
         await redis_service.evict_recent_memories()
 
-        # Background: generate embedding and extract entities
+        # Background: extract entities/sentiment and generate embedding
+        # Use a fresh session so we don't block the request session
+        await self._process_background(memory.id, request.content, request.title, request.type)
+
+        # Build response from the data we already have (avoid lazy-loading tags)
+        return MemoryResponse(
+            id=memory.id,
+            title=memory.title,
+            content=memory.content,
+            type=memory.type.value if memory.type else "TEXT",
+            source_url=memory.source_url,
+            file_path=memory.file_path,
+            sentiment=None,  # will be set by background task on next fetch
+            sentiment_score=memory.sentiment_score,
+            processing_status=memory.processing_status.value if memory.processing_status else "PENDING",
+            tags=tag_names,
+            created_at=memory.created_at,
+            updated_at=memory.updated_at,
+        )
+
+    async def _process_background(self, memory_id: str, content: str, title: str, mem_type: str) -> None:
+        """Extract entities/sentiment and generate embedding after memory creation."""
+        # 1. Extract entities and sentiment via LLM
         try:
-            embedding = await llm_service.generate_embedding(request.content)
+            result = await llm_service.extract_entities(content)
+            sentiment_str = result.get("sentiment", "NEUTRAL").upper()
+            entities = result.get("entities", [])
+
+            try:
+                sentiment_enum = Sentiment(sentiment_str)
+            except ValueError:
+                sentiment_enum = Sentiment.NEUTRAL
+
+            async with async_session_factory() as sdb:
+                # Update sentiment
+                mem = await sdb.get(Memory, memory_id)
+                if mem:
+                    mem.sentiment = sentiment_enum
+
+                entity_ids = []
+                for ent in entities:
+                    name = ent.get("name", "").strip()
+                    etype = ent.get("type", "OTHER").strip().upper()
+                    if not name:
+                        continue
+                    # Check if entity already exists
+                    existing = await sdb.execute(
+                        select(KnowledgeEntity).where(KnowledgeEntity.name == name)
+                    )
+                    entity = existing.scalar_one_or_none()
+                    if not entity:
+                        try:
+                            entity = KnowledgeEntity(name=name, type=EntityType(etype))
+                        except ValueError:
+                            entity = KnowledgeEntity(name=name, type=EntityType.OTHER)
+                        sdb.add(entity)
+                        await sdb.flush()
+                    entity_ids.append(entity.id)
+
+                    # Link memory to entity
+                    sdb.add(MemoryEntity(memory_id=memory_id, entity_id=entity.id))
+
+                # Create relations between consecutive entities (co-occurrence)
+                for i in range(len(entity_ids) - 1):
+                    sdb.add(Relation(
+                        source_entity_id=entity_ids[i],
+                        target_entity_id=entity_ids[i + 1],
+                        relation_type="RELATED_TO",
+                        memory_id=memory_id,
+                    ))
+
+                await sdb.commit()
+        except Exception:
+            pass  # Don't block if entity extraction fails
+
+        # 2. Generate embedding
+        try:
+            embedding = await llm_service.generate_embedding(content)
             qdrant_service.upsert_vectors([
-                {"id": memory.id, "vector": embedding, "payload": {"title": request.title, "type": request.type}}
+                {"id": memory_id, "vector": embedding, "payload": {"title": title, "type": mem_type}}
             ])
         except Exception:
-            pass  # Don't block the response if LLM/Qdrant fails
-
-        return self._to_response(memory)
+            pass
 
     async def get_all(
         self, db: AsyncSession, page: int = 0, size: int = 20

@@ -56,6 +56,10 @@ class LLMService:
         provider_defaults = PROVIDER_DEFAULTS.get(self.provider, {})
         return settings.llm_base_url or provider_defaults.get("base_url", "")
 
+    def _get_proxy(self) -> str | None:
+        import os
+        return os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY") or os.environ.get("ALL_PROXY")
+
     def _get_llm(self) -> ChatOpenAI:
         if self._llm is None:
             kwargs = {
@@ -65,6 +69,9 @@ class LLMService:
             }
             if self.base_url:
                 kwargs["base_url"] = self.base_url
+            proxy = self._get_proxy()
+            if proxy:
+                kwargs["openai_proxy"] = proxy
             self._llm = ChatOpenAI(**kwargs)
         return self._llm
 
@@ -74,6 +81,9 @@ class LLMService:
                 "api_key": self.api_key,
                 "model": "text-embedding-3-small",
             }
+            proxy = self._get_proxy()
+            if proxy:
+                kwargs["openai_proxy"] = proxy
             if self.base_url and self.provider != "openai":
                 kwargs["base_url"] = self.base_url
             self._embeddings = OpenAIEmbeddings(**kwargs)
@@ -82,15 +92,26 @@ class LLMService:
     @property
     def extractor(self):
         if self._extractor is None:
+            from langchain_core.output_parsers import StrOutputParser
+            sys_text = (
+                "你是一个实体识别助手。从文本中提取命名实体、分析情感、生成关键词标签。"
+                "返回纯 JSON 格式，不要 markdown 代码块。"
+                'Schema: {{"entities": [{{"name": "string", "type": "PERSON|PLACE|ORG|EVENT|TOPIC|TECHNOLOGY|OTHER"}}], '
+                '"sentiment": "POSITIVE|NEGATIVE|NEUTRAL", "tags": ["string"]}}'
+            )
             prompt = ChatPromptTemplate.from_messages([
-                ("system", "你是一个实体识别助手。从文本中提取命名实体、分析情感、生成关键词标签。"),
+                ("system", sys_text),
                 ("human", "{text}"),
             ])
-            self._extractor = prompt | self._get_llm().with_structured_output(EntityExtractionResult)
+            self._extractor = prompt | self._get_llm() | StrOutputParser()
         return self._extractor
 
     async def generate_embedding(self, text: str) -> list[float]:
-        result = await self._get_embeddings().aembed_query(text)
+        import asyncio
+        result = await asyncio.wait_for(
+            self._get_embeddings().aembed_query(text),
+            timeout=15.0,
+        )
         return result
 
     async def chat(self, messages: list[dict], **kwargs) -> str:
@@ -101,12 +122,33 @@ class LLMService:
         return result.content if hasattr(result, "content") else str(result)
 
     async def extract_entities(self, text: str) -> dict:
+        import asyncio, json
         try:
-            result: EntityExtractionResult = await self.extractor.ainvoke({"text": text})
+            raw = await asyncio.wait_for(
+                self.extractor.ainvoke({"text": text}),
+                timeout=20.0,
+            )
+            # Clean markdown fences if present
+            clean = raw.strip().strip("`").strip()
+            if clean.startswith("json"):
+                clean = clean[4:].strip()
+            clean = clean.strip("`").strip()
+            data = json.loads(clean)
+            entities = data.get("entities", [])
+            # Validate entity types
+            valid_types = {"PERSON", "PLACE", "ORG", "EVENT", "TOPIC", "TECHNOLOGY", "OTHER"}
+            for e in entities:
+                if e.get("type", "").upper() not in valid_types:
+                    e["type"] = "OTHER"
+                else:
+                    e["type"] = e["type"].upper()
+            sentiment = data.get("sentiment", "NEUTRAL").upper()
+            if sentiment not in {"POSITIVE", "NEGATIVE", "NEUTRAL"}:
+                sentiment = "NEUTRAL"
             return {
-                "entities": [{"name": e.name, "type": e.type} for e in result.entities],
-                "sentiment": result.sentiment,
-                "tags": result.tags,
+                "entities": entities,
+                "sentiment": sentiment,
+                "tags": data.get("tags", []),
             }
         except Exception:
             return {"entities": [], "sentiment": "NEUTRAL", "tags": []}

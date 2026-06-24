@@ -21,6 +21,38 @@
 - `frontend/src/pages/MemoriesPage.vue`：下拉选项和 LINK 专属输入框已移除
 
 # MyPersonalPensieve - 开发日志
+## 2026-06-24 — 修复知识图谱与情感分析（接入实体提取）
+
+### 理由
+
+知识图谱和情感分析页面始终为空。根因是后端创建记忆时从未调用 LLM 实体提取，`KnowledgeEntity`、`Relation`、`Memory.sentiment` 始终无数据。
+
+### 根因
+
+- `memory_service.create()` 只做了 embedding，没有调用 `llm_service.extract_entities()`
+- `llm_service` 使用 `with_structured_output()`，DeepSeek 不兼容 OpenAI parse 端点，静默失败
+- LLM 调用无超时保护，网络不通时会卡住整个请求
+
+### 后端修复
+
+- `memory_service.py`：
+  - 新增 `_process_background()`，创建记忆后自动提取实体、情感、生成 embedding
+  - 实体写入 `KnowledgeEntity` 表，记忆与实体关联写入 `MemoryEntity`
+  - 连续实体间创建 `Relation`（co-occurrence 关系），知识图谱有连线
+  - 情感写入 `Memory.sentiment`，情感分析页面有数据
+  - 使用独立 session（`async_session_factory()`）避免 greenlet 错误
+- `llm_service.py`：
+  - `extract_entities()` 从 `with_structured_output()` 改为 JSON 字符串解析（DeepSeek 兼容）
+  - prompt 使用 jinja2 转义 `{{}}` 避免 LangChain 模板变量冲突
+  - 新增 `openai_proxy` 支持 VPN 代理环境
+  - `extract_entities` 和 `generate_embedding` 均加 `asyncio.wait_for` 超时保护（20s/15s）
+
+### 测试
+
+- 生成 8 条 Vue3 知识记忆（Composition API、响应式原理、组件通信、Vue Router、生命周期、Pinia、Teleport/Suspense、性能优化）
+- 实体提取成功：59 个节点、65 条关系（Vue3、Evan You、Composition API、Pinia 等）
+- 情感分析：6 条 NEUTRAL、5 条 POSITIVE，趋势图正常渲染
+
 ## 2026-06-24 — 修复标签选择器（下拉不显示 / 无法添加 / 输入卡顿）
 
 ### 理由

@@ -54,3 +54,5 @@ frontend/vite.config.d.ts
 
 # PyInstaller
 backend/pensieve_backend.spec
+# Dev launcher (has proxy hardcoded)
+backend/run_with_proxy.py

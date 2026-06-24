@@ -21,6 +21,40 @@
 - `frontend/src/pages/MemoriesPage.vue`：下拉选项和 LINK 专属输入框已移除
 
 # MyPersonalPensieve - 开发日志
+## 2026-06-24 — 修复标签选择器（下拉不显示 / 无法添加 / 输入卡顿）
+
+### 理由
+
+标签功能此前完全不可用：下拉框不显示任何标签、无法选择已有标签、输入框偶尔无法输入。根因是 vue-query 的 Ref 解包问题以及下拉框使用了未定义的 Tailwind 颜色类。
+
+### 根因
+
+- `suggestions` computed 中直接对 `allTags`（vue-query 返回的 **Ref 对象**）调用 `.filter()`，等于在 Ref 上调用数组方法，抛出 `TypeError` 导致建议列表永远为空
+- 下拉框使用了 `bg-popover` 颜色类，但 `tailwind.config.js` 未定义 `popover` 颜色，背景透明导致看不见
+- `queryKey` 使用了静态的 `tagText.value`，搜索时不会触发重新查询
+
+### 前端修复
+
+- `frontend/src/pages/MemoriesPage.vue`：
+  - computed 改为 `allTags.value` 先解包 Ref 再 `.filter()`，标签列表正常显示
+  - `queryKey` 改为静态 `['tags']`，一次性加载全部标签，搜索改为本地即时过滤（`toLowerCase().includes()`）
+  - 下拉框背景从 `bg-popover` 改为 `bg-card`（已定义的颜色类）
+  - 回车添加标签时用 `[...selectedTags]` 批量赋值，减少重渲染次数
+  - 点击标签容器时调用 `openTagDropdownAndFocus` 确保 input 获得焦点
+  - 新增 `staleTime: 30_000` 避免短时间内重复请求
+
+### 后端修复
+
+- `backend/app/services/memory_service.py`：
+  - 标签创建改为 `memory.tags.append(mt)` 直接挂到关系列表，确保 `commit` 后 `_to_response` 能取到标签
+  - 移除无效的 `db.refresh(memory, attribute_names=["tags"])`（`attribute_names` 不支持 relationship 字段）
+
+### 附带修复
+
+- `frontend/src/lib/utils.ts`：修复 emoji 和中文相对时间显示乱码（`??` → `📝`、`刚刚`、`分钟前` 等）
+- `frontend/src/pages/HomePage.vue`：首页按钮文案根据有无记忆动态切换
+- `frontend/src/types/index.ts`、`frontend/src/api/index.ts`：新增 `TagItem` 类型和 `getTags()` API
+
 
 ## 2026-06-23 — 重构为 Electron 桌面应用（SQLite + ChromaDB）
 

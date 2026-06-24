@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, Request, HTTPException, Query
+﻿from fastapi import APIRouter, Depends, Request, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 from app.db.session import get_db
 from app.schemas.memory import MemoryRequest, MemoryResponse, PagedResponse
 from app.services.memory_service import memory_service
@@ -33,6 +34,26 @@ async def create_memory(
         return await memory_service.create(db, body)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/tags")
+async def get_all_tags(
+    q: str = Query(None, description="搜索标签关键词"),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+):
+    """返回所有不重复的标签，支持搜索过滤。按使用次数降序排列。"""
+    from sqlalchemy import select as sa_select
+    from app.models.memory import MemoryTag
+
+    stmt = sa_select(MemoryTag.tag, func.count(MemoryTag.tag).label("count"))
+    if q:
+        stmt = stmt.where(MemoryTag.tag.ilike(f"%{q}%"))
+    stmt = stmt.group_by(MemoryTag.tag).order_by(func.count(MemoryTag.tag).desc()).limit(limit)
+
+    result = await db.execute(stmt)
+    rows = result.all()
+    return [{"tag": row.tag, "count": row.count} for row in rows]
 
 
 @router.get("", response_model=PagedResponse)

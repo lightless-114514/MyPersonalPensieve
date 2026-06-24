@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -6,6 +6,7 @@ import type {
   KnowledgeGraph,
   SentimentTrend,
   ProcessingProgress,
+  TagItem,
 } from '@/types'
 
 function snakeToCamel(str: string): string {
@@ -69,6 +70,11 @@ export async function getMemory(id: string) {
 
 export async function deleteMemory(id: string) {
   await api.delete(`/memories/${id}`)
+}
+
+export async function getTags(q?: string, limit?: number) {
+  const { data } = await api.get<TagItem[]>('/memories/tags', { params: { q, limit } })
+  return data
 }
 
 export async function getKnowledgeGraph() {

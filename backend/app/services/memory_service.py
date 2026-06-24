@@ -22,18 +22,18 @@ class MemoryService:
         db.add(memory)
         await db.flush()
 
-        # Add tags
+        # Add tags - append directly to memory.tags so they are visible after commit
         for tag in request.tags or []:
-            db.add(MemoryTag(memory_id=memory.id, tag=tag))
+            mt = MemoryTag(memory_id=memory.id, tag=tag)
+            db.add(mt)
+            memory.tags.append(mt)
 
         await db.commit()
-        await db.refresh(memory, attribute_names=["tags"])
 
         # Evict cache
         await redis_service.evict_recent_memories()
 
         # Background: generate embedding and extract entities
-        # (in production this would be a BackgroundTask or Celery task)
         try:
             embedding = await llm_service.generate_embedding(request.content)
             qdrant_service.upsert_vectors([

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getRecentMemories } from '@/api'
 import { formatDate, typeIcon, sentimentColor } from '@/lib/utils'
@@ -8,6 +9,8 @@ const { data: memories, isLoading } = useQuery({
   queryKey: ['recent-memories'],
   queryFn: () => getRecentMemories(10),
 })
+
+const hasMemories = computed(() => (memories.value?.length ?? 0) > 0)
 </script>
 
 <template>
@@ -23,7 +26,7 @@ const { data: memories, isLoading } = useQuery({
         to="/memories?new=true"
         class="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
       >
-        记录第一条记忆
+        {{ hasMemories ? '记录新的记忆' : '记录第一条记忆' }}
         <ArrowRight class="w-4 h-4" />
       </router-link>
     </div>

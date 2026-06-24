@@ -1,4 +1,4 @@
-export interface Memory {
+﻿export interface Memory {
   id: string
   title: string
   content: string
@@ -33,6 +33,11 @@ export interface Relationship {
   targetId: string
   type: string
   strength: number
+}
+
+export interface TagItem {
+  tag: string
+  count: number
 }
 
 export interface SearchResult {

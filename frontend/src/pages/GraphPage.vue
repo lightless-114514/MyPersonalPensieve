@@ -62,17 +62,45 @@ function buildHierarchy(nodes: any[], links: any[]) {
     }
   }
 
-  // Wrap in a virtual root so isolated nodes become independent top-level branches
-  // (siblings of the main tree root), NOT children of Vue3.
+  // Find any connected nodes not visited by BFS — these belong to
+  // separate connected components and need their own independent trees.
+  const remaining = connectedNodes.filter(n => !visited.has(n.id))
+  const extraRoots: any[] = []
+  while (remaining.length > 0) {
+    const compRootId = remaining[0].id
+    const compRoot = nodeMap.get(compRootId)!
+    compRoot._depth = 0
+    visited.add(compRootId)
+    const compQueue = [compRoot]
+    remaining.splice(0, 1)
+    while (compQueue.length) {
+      const cur = compQueue.shift()!
+      const neighbors = adj.get(cur.id) || []
+      for (const nid of neighbors) {
+        if (visited.has(nid)) continue
+        visited.add(nid)
+        const child = nodeMap.get(nid)!
+        child._depth = cur._depth + 1
+        cur.children.push(child)
+        compQueue.push(child)
+        const idx = remaining.findIndex((r: any) => r.id === nid)
+        if (idx !== -1) remaining.splice(idx, 1)
+      }
+    }
+    extraRoots.push(compRoot)
+  }
+
+  // Wrap in a virtual root: children = [main tree root, ...extra component roots, ...isolated nodes]
   const virtualRoot = {
     id: '__virtual__',
     name: '',
     type: 'VIRTUAL',
     group: -1,
-    children: [root] as any[],
+    children: [root, ...extraRoots] as any[],
     _depth: -1,
   }
   root._depth = 0
+  extraRoots.forEach((r: any) => { r._depth = 0 })
 
   // Isolated nodes become direct children of the virtual root (independent roots)
   if (isolatedNodes.length > 0) {
@@ -213,7 +241,7 @@ function renderTree() {
   const root = d3.hierarchy<any>(rootData)
   const treeLayout = d3.tree<any>()
     .size([height - 80, width - 200])
-    .separation((a, b) => (a.parent?.data.id === b.parent?.data.id ? 1 : 1.5))
+    .separation((a, b) => (a.parent?.data.id === b.parent?.data.id ? 1.2 : 1.8))
   treeLayout(root)
 
   const color = d3.scaleOrdinal(d3.schemeCategory10)
@@ -244,13 +272,16 @@ function renderTree() {
     .attr('stroke-width', 2)
 
   node.append('text')
-    .text((d) => d.data.name)
+    .text((d) => { const n = d.data.name; return n.length > 14 ? n.slice(0, 13) + '…' : n })
     .attr('x', (d) => d.children ? -12 : 12)
     .attr('y', 4)
     .attr('text-anchor', (d) => d.children ? 'end' : 'start')
     .attr('font-size', '11px')
     .attr('fill', 'hsl(var(--foreground))')
     .attr('opacity', (d) => d.data.id === '__virtual__' ? 0 : 1)
+
+  node.append('title')
+    .text((d) => d.data.name)
 
   // Auto-fit: center the tree (exclude the invisible virtual root from bounds)
   const visible = root.descendants().filter((d) => d.data.id !== '__virtual__')

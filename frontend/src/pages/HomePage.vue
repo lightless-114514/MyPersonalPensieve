@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { getRecentMemories } from '@/api'
 import { formatDate, typeIcon, sentimentColor } from '@/lib/utils'
 import { Brain, ArrowRight } from 'lucide-vue-next'
+import { useGreeting } from '@/composables/useGreeting'
 
 const { data: memories, isLoading } = useQuery({
   queryKey: ['recent-memories'],
@@ -11,6 +12,7 @@ const { data: memories, isLoading } = useQuery({
 })
 
 const hasMemories = computed(() => (memories.value?.length ?? 0) > 0)
+const { greeting } = useGreeting()
 </script>
 
 <template>
@@ -18,7 +20,7 @@ const hasMemories = computed(() => (memories.value?.length ?? 0) > 0)
     <!-- Hero -->
     <div class="text-center py-12">
       <Brain class="w-16 h-16 text-primary mx-auto mb-4" />
-      <h1 class="text-3xl font-bold mb-2">你的第二大脑</h1>
+      <h1 class="text-3xl font-bold mb-2">{{ greeting }}</h1>
       <p class="text-muted-foreground max-w-md mx-auto">
         存储文字、截图、语音、链接。用自然语言查询你的过去。
       </p>

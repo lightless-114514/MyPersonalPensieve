@@ -1,4 +1,4 @@
-﻿import json
+import json
 import math
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,7 @@ from app.models.memory import (
     Memory, MemoryTag, MemoryType, Sentiment, EntityType, BigTag,
     KnowledgeEntity, MemoryEntity, Relation,
 )
-from app.schemas.memory import MemoryRequest, MemoryResponse, PagedResponse
+from app.schemas.memory import MemoryRequest, UpdateMemoryRequest, MemoryResponse, PagedResponse
 from app.services.redis_service import redis_service
 from app.services.qdrant_service import qdrant_service
 from app.services.llm_service import llm_service
@@ -198,7 +198,56 @@ class MemoryService:
             raise ValueError(f"Memory not found: {memory_id}")
         return self._to_response(memory)
 
-    async def delete(self, db: AsyncSession, memory_id: str) -> None:
+    
+    async def update(self, db: AsyncSession, memory_id: str, request: UpdateMemoryRequest) -> MemoryResponse:
+        query = (
+            select(Memory)
+            .options(selectinload(Memory.tags))
+            .where(Memory.id == memory_id)
+        )
+        result = await db.execute(query)
+        memory = result.scalar_one_or_none()
+        if not memory:
+            raise ValueError(f"Memory not found: {memory_id}")
+
+        if request.title is not None:
+            memory.title = request.title
+        if request.content is not None:
+            memory.content = request.content
+        if request.type is not None:
+            memory.type = MemoryType(request.type.upper())
+        if request.source_url is not None:
+            memory.source_url = request.source_url
+        if request.big_tag is not None:
+            if request.big_tag == "":
+                memory.big_tag = None
+            else:
+                try:
+                    memory.big_tag = BigTag(request.big_tag.upper())
+                except ValueError:
+                    pass
+
+        if request.tags is not None:
+            # Remove old tags
+            new_tags = set(t.strip() for t in request.tags if t.strip())
+            existing_tags = set(t.tag for t in memory.tags)
+            to_remove = existing_tags - new_tags
+            to_add = new_tags - existing_tags
+
+            for t in to_remove:
+                mt = next((mt for mt in memory.tags if mt.tag == t), None)
+                if mt:
+                    await db.delete(mt)
+            for t in to_add:
+                memory.tags.append(MemoryTag(memory_id=memory_id, tag=t))
+
+        await db.commit()
+        await redis_service.evict_recent_memories()
+
+        # Refetch to get fresh state
+        return await self.get_by_id(db, memory_id)
+
+    
         memory = await db.get(Memory, memory_id)
         if not memory:
             raise ValueError(f"Memory not found: {memory_id}")

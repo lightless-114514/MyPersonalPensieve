@@ -2,7 +2,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func
 from app.db.session import get_db
-from app.schemas.memory import MemoryRequest, MemoryResponse, PagedResponse
+from app.schemas.memory import MemoryRequest, UpdateMemoryRequest, MemoryResponse, PagedResponse
 from app.services.memory_service import memory_service
 from app.services.redis_service import redis_service
 from app.services.llm_service import llm_service
@@ -20,7 +20,7 @@ async def check_rate_limit(request: Request):
     ip = request.client.host if request.client else "unknown"
     limited = await redis_service.is_rate_limited(ip)
     if limited:
-        raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
+        raise HTTPException(status_code=429, detail="Too many requests")
 
 
 @router.post("", response_model=MemoryResponse, status_code=201)
@@ -38,11 +38,10 @@ async def create_memory(
 
 @router.get("/tags")
 async def get_all_tags(
-    q: str = Query(None, description="搜索标签关键词"),
+    q: str = Query(None, description="Search tags"),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
-    """返回所有不重复的标签，支持搜索过滤。按使用次数降序排列。"""
     from sqlalchemy import select as sa_select
     from app.models.memory import MemoryTag
 
@@ -86,6 +85,20 @@ async def get_memory_by_id(
     await check_rate_limit(request)
     try:
         return await memory_service.get_by_id(db, id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.put("/{id}", response_model=MemoryResponse)
+async def update_memory(
+    id: str,
+    body: UpdateMemoryRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await check_rate_limit(request)
+    try:
+        return await memory_service.update(db, id, body)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 

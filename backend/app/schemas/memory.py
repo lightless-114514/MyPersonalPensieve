@@ -12,6 +12,16 @@ class MemoryRequest(BaseModel):
     big_tag: Optional[str] = None
 
 
+class UpdateMemoryRequest(BaseModel):
+    """Partial update — all fields optional."""
+    title: Optional[str] = None
+    content: Optional[str] = None
+    type: Optional[str] = None
+    source_url: Optional[str] = None
+    tags: Optional[list[str]] = None
+    big_tag: Optional[str] = None
+
+
 class MemoryResponse(BaseModel):
     id: str
     title: str

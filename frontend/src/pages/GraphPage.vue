@@ -1,5 +1,5 @@
-﻿<script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getKnowledgeGraph } from '@/api'
 import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
@@ -11,7 +11,7 @@ const layoutMode = ref<'force' | 'tree'>('force')
 const filterBigTag = ref<BigTagCategory | ''>('')
 
 const { data: graph } = useQuery({
-  queryKey: ['knowledge-graph', filterBigTag.value],
+  queryKey: computed(() => ['knowledge-graph', filterBigTag.value]),
   queryFn: () => getKnowledgeGraph(filterBigTag.value || undefined),
 })
 

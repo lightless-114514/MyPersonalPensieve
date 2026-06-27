@@ -1,5 +1,5 @@
-﻿<script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getSentimentTrend } from '@/api'
 import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
@@ -11,7 +11,7 @@ const days = ref(30)
 const filterBigTag = ref<BigTagCategory | ''>('')
 
 const { data: trends } = useQuery({
-  queryKey: ['sentiment-trend', days.value, filterBigTag.value],
+  queryKey: computed(() => ['sentiment-trend', days.value, filterBigTag.value]),
   queryFn: () => getSentimentTrend(days.value, filterBigTag.value || undefined),
 })
 

@@ -32,7 +32,6 @@ const api = axios.create({
   timeout: 30000,
 })
 
-// 自动附带 API Key（从设置页的 localStorage 读取）
 api.interceptors.request.use((config) => {
   const settings = useSettingsStore()
   if (settings.apiKey) {
@@ -50,6 +49,11 @@ api.interceptors.response.use((response) => {
 
 export async function createMemory(payload: any) {
   const { data } = await api.post<Memory>('/memories', payload)
+  return data
+}
+
+export async function updateMemory(id: string, payload: any) {
+  const { data } = await api.put<Memory>(`/memories/${id}`, payload)
   return data
 }
 

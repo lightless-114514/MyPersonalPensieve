@@ -77,13 +77,17 @@ export async function getTags(q?: string, limit?: number) {
   return data
 }
 
-export async function getKnowledgeGraph() {
-  const { data } = await api.get<KnowledgeGraph>('/graph')
+export async function getKnowledgeGraph(bigTag?: string) {
+  const { data } = await api.get<KnowledgeGraph>('/graph', {
+    params: bigTag ? { big_tag: bigTag } : {},
+  })
   return data
 }
 
-export async function getSentimentTrend(days: number = 30) {
-  const { data } = await api.get<SentimentTrend[]>('/analytics/sentiment', { params: { days } })
+export async function getSentimentTrend(days: number = 30, bigTag?: string) {
+  const { data } = await api.get<SentimentTrend[]>('/analytics/sentiment', {
+    params: { days, ...(bigTag ? { big_tag: bigTag } : {}) },
+  })
   return data
 }
 

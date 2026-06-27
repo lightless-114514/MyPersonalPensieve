@@ -9,6 +9,7 @@
   sentiment_score?: number | null
   processing_status: string
   tags: string[]
+  big_tag?: BigTagCategory | null
   created_at: string
   updated_at: string
   // convenience aliases
@@ -16,10 +17,13 @@
   filePath?: string
   sentimentScore?: number
   processingStatus?: string
+  bigTag?: BigTagCategory | null
   createdAt?: string
   updatedAt?: string
   entities?: Entity[]
 }
+
+export type BigTagCategory = 'KNOWLEDGE_POINT' | 'FREEFORM_NOTE' | 'INSPIRATION_FLASH' | 'DECISION_DILEMMA'
 
 export interface Entity {
   id: string

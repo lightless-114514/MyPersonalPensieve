@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from datetime import datetime
 from sqlalchemy import (
     String, Text, Float, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum
@@ -37,6 +37,14 @@ class EntityType(str, enum.Enum):
     OTHER = "OTHER"
 
 
+class BigTag(str, enum.Enum):
+    """大标签 — 大的彩色分类标签，区别于普通小标签"""
+    KNOWLEDGE_POINT = "KNOWLEDGE_POINT"    # 知识点
+    FREEFORM_NOTE = "FREEFORM_NOTE"        # 随心记述
+    INSPIRATION_FLASH = "INSPIRATION_FLASH"  # 灵感闪现
+    DECISION_DILEMMA = "DECISION_DILEMMA"   # 决策纠结
+
+
 class Memory(Base):
     __tablename__ = "memories"
 
@@ -51,6 +59,7 @@ class Memory(Base):
     processing_status: Mapped[ProcessingStatus] = mapped_column(
         SAEnum(ProcessingStatus), nullable=False, default=ProcessingStatus.PENDING
     )
+    big_tag: Mapped[BigTag | None] = mapped_column(SAEnum(BigTag), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now

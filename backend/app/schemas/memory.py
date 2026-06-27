@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -9,6 +9,7 @@ class MemoryRequest(BaseModel):
     type: str = "TEXT"
     source_url: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
+    big_tag: Optional[str] = None
 
 
 class MemoryResponse(BaseModel):
@@ -22,6 +23,7 @@ class MemoryResponse(BaseModel):
     sentiment_score: Optional[float] = None
     processing_status: str
     tags: list[str] = Field(default_factory=list)
+    big_tag: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

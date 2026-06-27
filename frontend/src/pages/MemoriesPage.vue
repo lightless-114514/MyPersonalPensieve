@@ -1,10 +1,11 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getMemories, createMemory, getTags } from '@/api'
-import { formatDate, typeIcon, sentimentColor } from '@/lib/utils'
-import { Search, Plus, X, Loader2 } from 'lucide-vue-next'
+import { formatDate, typeIcon, sentimentColor, BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
+import type { BigTagCategory } from '@/types'
+import { Search, Plus, X, Loader2, Tag } from 'lucide-vue-next'
 
 const route = useRoute()
 const queryClient = useQueryClient()
@@ -15,6 +16,7 @@ const isUploading = ref(false)
 
 const createForm = ref({ title: '', content: '', type: 'TEXT', sourceUrl: '' })
 const selectedTags = ref<string[]>([])
+const selectedBigTag = ref<BigTagCategory | ''>('')
 
 // ---- Tag selector ----
 const tagText = ref('')
@@ -111,6 +113,7 @@ const createMutation = useMutation({
       tags: [...selectedTags.value],
     }
     if (createForm.value.sourceUrl) payload.source_url = createForm.value.sourceUrl.trim()
+    if (selectedBigTag.value) payload.big_tag = selectedBigTag.value
     return createMemory(payload)
   },
   onSuccess: () => {
@@ -127,6 +130,7 @@ const createMutation = useMutation({
 function resetForm() {
   createForm.value = { title: '', content: '', type: 'TEXT', sourceUrl: '' }
   selectedTags.value = []
+  selectedBigTag.value = ''
   tagText.value = ''
 }
 
@@ -152,29 +156,53 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
       <div class="grid gap-3">
         <input v-model="createForm.title" placeholder="标题" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
         <select v-model="createForm.type" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-          <option value="TEXT">📝 文字</option>
+          <option value="TEXT">📝 文本</option>
           <option value="IMAGE">🖼️ 图片</option>
         </select>
-        <textarea v-model="createForm.content" placeholder="记忆内容..." rows="4" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"></textarea>
-        <input v-model="createForm.sourceUrl" placeholder="来源链接（可选）" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
 
-        <!-- Tag input -->
-        <div>
-          <label class="block text-sm font-medium mb-1.5">标签</label>
-          <div class="relative">
-            <div
-              class="flex flex-wrap items-center gap-1.5 p-2 rounded-md border border-input bg-background min-h-[36px]"
-              @click="openTagDropdownAndFocus"
+        <!-- Big tag selector -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-muted-foreground font-medium">🏷️ 大标签（可选）</label>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="opt in BIG_TAG_OPTIONS"
+              :key="opt.value"
+              type="button"
+              @click="selectedBigTag = selectedBigTag === opt.value ? '' : opt.value"
+              :class="[
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all',
+                selectedBigTag === opt.value
+                  ? bigTagClass(opt.value) + ' shadow-sm scale-105'
+                  : 'border-muted bg-background text-muted-foreground hover:border-border'
+              ]"
             >
+              <span>{{ opt.icon }}</span>
+              <span>{{ opt.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <input v-model="createForm.sourceUrl" placeholder="来源 URL（可选）" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+
+        <textarea
+          v-model="createForm.content"
+          placeholder="写下你的记忆…"
+          rows="6"
+          class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+        ></textarea>
+
+        <!-- Tag selector -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-muted-foreground font-medium">🏷️ 标签</label>
+          <div class="relative" @click="openTagDropdownAndFocus">
+            <div class="flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-md border border-input bg-background cursor-text min-h-[38px]">
               <span
                 v-for="tag in selectedTags"
                 :key="tag"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary text-xs"
               >
                 {{ tag }}
-                <button type="button" @mousedown.prevent="removeTag(tag)" class="rounded-full hover:bg-primary/20 p-0.5 -mr-0.5">
-                  <X class="w-3 h-3" />
-                </button>
+                <button @click.stop="removeTag(tag)" class="hover:text-foreground">&times;</button>
               </span>
               <input
                 ref="tagInputRef"
@@ -230,15 +258,26 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         v-for="m in data?.content"
         :key="m.id"
         :to="`/memories/${m.id}`"
-        class="block p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+        class="block p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors relative"
       >
+        <!-- Big tag badge (top-right corner) -->
+        <div
+          v-if="m.bigTag"
+          :class="[
+            'absolute -top-0.5 -right-0.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-bl-lg rounded-tr-lg text-xs font-semibold border',
+            bigTagClass(m.bigTag)
+          ]"
+        >
+          {{ bigTagLabel(m.bigTag) }}
+        </div>
+
         <div class="flex items-start justify-between gap-3">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
               <span>{{ typeIcon(m.type) }}</span>
               <h3 class="font-medium truncate">{{ m.title }}</h3>
               <span v-if="m.sentiment" :class="['text-xs', sentimentColor(m.sentiment)]">
-                {{ m.sentiment === 'POSITIVE' ? '😊' : m.sentiment === 'NEGATIVE' ? '😞' : '😓' }}
+                {{ m.sentiment === 'POSITIVE' ? '😊' : m.sentiment === 'NEGATIVE' ? '😔' : '😐' }}
               </span>
             </div>
             <p class="text-sm text-muted-foreground line-clamp-2">{{ m.content }}</p>

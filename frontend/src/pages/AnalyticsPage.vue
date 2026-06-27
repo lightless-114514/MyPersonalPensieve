@@ -2,14 +2,17 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getSentimentTrend } from '@/api'
+import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
+import type { BigTagCategory } from '@/types'
 import * as d3 from 'd3'
 
 const container = ref<HTMLDivElement>()
 const days = ref(30)
+const filterBigTag = ref<BigTagCategory | ''>('')
 
 const { data: trends } = useQuery({
-  queryKey: ['sentiment-trend', days.value],
-  queryFn: () => getSentimentTrend(days.value),
+  queryKey: ['sentiment-trend', days.value, filterBigTag.value],
+  queryFn: () => getSentimentTrend(days.value, filterBigTag.value || undefined),
 })
 
 let rendered = false
@@ -42,7 +45,6 @@ function renderChart() {
     .domain([-1, 1])
     .range([height, 0])
 
-  // Axes
   svg.append('g')
     .attr('transform', `translate(0,${height / 2})`)
     .call(d3.axisBottom(x).tickValues(x.domain().filter((_, i) => i % Math.ceil(data.length / 10) === 0)))
@@ -54,7 +56,6 @@ function renderChart() {
   svg.append('g')
     .call(d3.axisLeft(y).ticks(5))
 
-  // Zero line
   svg.append('line')
     .attr('x1', 0)
     .attr('x2', width)
@@ -63,7 +64,6 @@ function renderChart() {
     .attr('stroke', 'hsl(var(--border))')
     .attr('stroke-dasharray', '4 4')
 
-  // Area - positive
   const areaPositive = d3.area<typeof data[0]>()
     .x((d) => x(d.date)!)
     .y0(height / 2)
@@ -73,7 +73,6 @@ function renderChart() {
     .attr('fill', 'hsl(142 71% 45% / 0.15)')
     .attr('d', areaPositive)
 
-  // Area - negative
   const areaNegative = d3.area<typeof data[0]>()
     .x((d) => x(d.date)!)
     .y0(height / 2)
@@ -83,7 +82,6 @@ function renderChart() {
     .attr('fill', 'hsl(0 84% 60% / 0.15)')
     .attr('d', areaNegative)
 
-  // Line
   const line = d3.line<typeof data[0]>()
     .x((d) => x(d.date)!)
     .y((d) => y(d.average))
@@ -95,7 +93,6 @@ function renderChart() {
     .attr('stroke-width', 2)
     .attr('d', line)
 
-  // Dots
   svg.selectAll('circle')
     .data(data)
     .join('circle')
@@ -105,6 +102,10 @@ function renderChart() {
     .attr('fill', 'hsl(var(--primary))')
 
   rendered = true
+}
+
+function setFilter(bigTag: BigTagCategory | '') {
+  filterBigTag.value = filterBigTag.value === bigTag ? '' : bigTag
 }
 
 onMounted(() => renderChart())
@@ -124,6 +125,36 @@ watch(trends, () => setTimeout(renderChart, 100))
         <option :value="30">最近 30 天</option>
         <option :value="90">最近 90 天</option>
       </select>
+    </div>
+
+    <!-- Big tag filter buttons -->
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-sm text-muted-foreground mr-1">筛选大标签：</span>
+      <button
+        @click="setFilter('')"
+        :class="[
+          'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+          !filterBigTag
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
+        ]"
+      >
+        全部
+      </button>
+      <button
+        v-for="opt in BIG_TAG_OPTIONS"
+        :key="opt.value"
+        @click="setFilter(opt.value)"
+        :class="[
+          'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border transition-all',
+          filterBigTag === opt.value
+            ? bigTagClass(opt.value) + ' shadow-sm'
+            : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
+        ]"
+      >
+        <span>{{ opt.icon }}</span>
+        <span>{{ opt.label }}</span>
+      </button>
     </div>
 
     <div ref="container" class="w-full rounded-lg border border-border bg-card p-4">

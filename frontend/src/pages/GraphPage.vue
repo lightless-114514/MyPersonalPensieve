@@ -1,21 +1,23 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getKnowledgeGraph } from '@/api'
+import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
+import type { BigTagCategory } from '@/types'
 import * as d3 from 'd3'
 
 const container = ref<HTMLDivElement>()
 const layoutMode = ref<'force' | 'tree'>('force')
+const filterBigTag = ref<BigTagCategory | ''>('')
 
 const { data: graph } = useQuery({
-  queryKey: ['knowledge-graph'],
-  queryFn: getKnowledgeGraph,
+  queryKey: ['knowledge-graph', filterBigTag.value],
+  queryFn: () => getKnowledgeGraph(filterBigTag.value || undefined),
 })
 
 let simulation: d3.Simulation<any, any> | null = null
 
 function buildHierarchy(nodes: any[], links: any[]) {
-  // Build adjacency map
   const nodeMap = new Map<string, any>()
   nodes.forEach(n => nodeMap.set(n.id, { ...n, children: [], _depth: -1 }))
 
@@ -29,13 +31,11 @@ function buildHierarchy(nodes: any[], links: any[]) {
     adj.get(t)!.push(s)
   })
 
-  // Separate connected nodes from isolated ones
   const connectedNodes = nodes.filter(n => adj.has(n.id) && adj.get(n.id)!.length > 0)
   const isolatedNodes = nodes.filter(n => !adj.has(n.id) || adj.get(n.id)!.length === 0)
 
   if (connectedNodes.length === 0) return null
 
-  // Find root: connected node with most connections
   let rootId = connectedNodes[0].id
   let maxDeg = -1
   connectedNodes.forEach(n => {
@@ -46,7 +46,6 @@ function buildHierarchy(nodes: any[], links: any[]) {
   const root = nodeMap.get(rootId)!
   root._depth = 0
 
-  // BFS to build tree from connected nodes only
   const visited = new Set<string>([rootId])
   const queue = [root]
   while (queue.length) {
@@ -62,8 +61,6 @@ function buildHierarchy(nodes: any[], links: any[]) {
     }
   }
 
-  // Find any connected nodes not visited by BFS — these belong to
-  // separate connected components and need their own independent trees.
   const remaining = connectedNodes.filter(n => !visited.has(n.id))
   const extraRoots: any[] = []
   while (remaining.length > 0) {
@@ -90,7 +87,6 @@ function buildHierarchy(nodes: any[], links: any[]) {
     extraRoots.push(compRoot)
   }
 
-  // Wrap in a virtual root: children = [main tree root, ...extra component roots, ...isolated nodes]
   const virtualRoot = {
     id: '__virtual__',
     name: '',
@@ -102,12 +98,11 @@ function buildHierarchy(nodes: any[], links: any[]) {
   root._depth = 0
   extraRoots.forEach((r: any) => { r._depth = 0 })
 
-  // Isolated nodes become direct children of the virtual root (independent roots)
   if (isolatedNodes.length > 0) {
     isolatedNodes.forEach(n => {
       const node = nodeMap.get(n.id)!
       node._depth = 1
-      node.children = [] // ensure no stray children
+      node.children = []
       virtualRoot.children.push(node)
     })
   }
@@ -164,29 +159,12 @@ function renderForce() {
     .data(links)
     .join('line')
     .attr('stroke', 'hsl(var(--border))')
-    .attr('stroke-width', (d) => Math.max(1, d.strength * 3))
+    .attr('stroke-width', 1.5)
 
   const node = g.append('g')
     .selectAll('g')
     .data(nodes)
     .join('g')
-    .call(
-      d3.drag<SVGGElement, any>()
-        .on('start', (event, d) => {
-          if (!event.active) simulation?.alphaTarget(0.3).restart()
-          d.fx = event.x
-          d.fy = event.y
-        })
-        .on('drag', (event, d) => {
-          d.fx = event.x
-          d.fy = event.y
-        })
-        .on('end', (event, d) => {
-          if (!event.active) simulation?.alphaTarget(0)
-          d.fx = null
-          d.fy = null
-        })
-    )
 
   node.append('circle')
     .attr('r', 8)
@@ -237,7 +215,6 @@ function renderTree() {
     })
   svg.call(zoom)
 
-  // Use horizontal tree layout (left to right, mind-map style)
   const root = d3.hierarchy<any>(rootData)
   const treeLayout = d3.tree<any>()
     .size([height - 80, width - 200])
@@ -246,7 +223,6 @@ function renderTree() {
 
   const color = d3.scaleOrdinal(d3.schemeCategory10)
 
-  // Links as curved paths — hide links coming from the virtual root
   g.append('g')
     .selectAll('path')
     .data(root.links().filter((l: any) => l.source.data.id !== '__virtual__'))
@@ -258,7 +234,6 @@ function renderTree() {
       .x((d) => d.y)
       .y((d) => d.x))
 
-  // Nodes
   const node = g.append('g')
     .selectAll('g')
     .data(root.descendants())
@@ -283,7 +258,6 @@ function renderTree() {
   node.append('title')
     .text((d) => d.data.name)
 
-  // Auto-fit: center the tree (exclude the invisible virtual root from bounds)
   const visible = root.descendants().filter((d) => d.data.id !== '__virtual__')
   const x0 = visible.reduce((min, d) => Math.min(min, d.x), Infinity)
   const x1 = visible.reduce((max, d) => Math.max(max, d.x), -Infinity)
@@ -302,6 +276,10 @@ function renderTree() {
 function toggleLayout() {
   layoutMode.value = layoutMode.value === 'force' ? 'tree' : 'force'
   setTimeout(renderGraph, 50)
+}
+
+function setFilter(bigTag: BigTagCategory | '') {
+  filterBigTag.value = filterBigTag.value === bigTag ? '' : bigTag
 }
 
 onMounted(() => {
@@ -331,12 +309,43 @@ watch(layoutMode, () => {
         @click="toggleLayout"
         class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
       >
-        {{ layoutMode === 'force' ? '🔀 切换思维导图' : '🌀 切换力导向图' }}
+        {{ layoutMode === 'force' ? '🔀 切换思维导图' : '🕸️ 切换力导向图' }}
       </button>
     </div>
+
+    <!-- Big tag filter buttons -->
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-sm text-muted-foreground mr-1">筛选大标签：</span>
+      <button
+        @click="setFilter('')"
+        :class="[
+          'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+          !filterBigTag
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
+        ]"
+      >
+        全部
+      </button>
+      <button
+        v-for="opt in BIG_TAG_OPTIONS"
+        :key="opt.value"
+        @click="setFilter(opt.value)"
+        :class="[
+          'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border transition-all',
+          filterBigTag === opt.value
+            ? bigTagClass(opt.value) + ' shadow-sm'
+            : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
+        ]"
+      >
+        <span>{{ opt.icon }}</span>
+        <span>{{ opt.label }}</span>
+      </button>
+    </div>
+
     <div
       ref="container"
-      class="w-full h-[calc(100vh-10rem)] rounded-lg border border-border bg-card"
+      class="w-full h-[calc(100vh-14rem)] rounded-lg border border-border bg-card"
     >
       <div
         v-if="!graph?.nodes?.length"

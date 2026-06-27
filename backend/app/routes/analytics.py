@@ -1,26 +1,64 @@
-from fastapi import APIRouter, Query
+﻿from fastapi import APIRouter, Query, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
 from app.db.session import get_db
-from app.models.memory import Memory
+from app.models.memory import Memory, BigTag
 
 router = APIRouter()
 
-from fastapi import Depends
-
 
 @router.get("/api/graph")
-async def get_knowledge_graph(db: AsyncSession = Depends(get_db)):
-    """Return knowledge graph data from entities and relations."""
+async def get_knowledge_graph(
+    big_tag: str = Query(None, description="Filter by big_tag"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return knowledge graph data from entities and relations. Optionally filter by big_tag."""
     from app.models.memory import KnowledgeEntity, MemoryEntity as ME, Relation
-    from sqlalchemy.orm import selectinload
 
-    # Get all entities with their memory associations
-    entities_result = await db.execute(select(KnowledgeEntity))
-    entities = entities_result.scalars().all()
+    # If big_tag filter is provided, only include entities from memories with that big_tag
+    if big_tag:
+        try:
+            bt = BigTag(big_tag.upper())
+        except ValueError:
+            return {"nodes": [], "links": []}
 
-    relations_result = await db.execute(select(Relation))
-    relations = relations_result.scalars().all()
+        # Get memory IDs with this big_tag
+        mem_ids_result = await db.execute(
+            select(Memory.id).where(Memory.big_tag == bt)
+        )
+        mem_ids = set(row[0] for row in mem_ids_result.all())
+
+        if not mem_ids:
+            return {"nodes": [], "links": []}
+
+        # Get entities linked to these memories
+        me_result = await db.execute(
+            select(ME.entity_id).where(ME.memory_id.in_(mem_ids)).distinct()
+        )
+        entity_ids = set(row[0] for row in me_result.all())
+
+        if not entity_ids:
+            return {"nodes": [], "links": []}
+
+        entities_result = await db.execute(
+            select(KnowledgeEntity).where(KnowledgeEntity.id.in_(entity_ids))
+        )
+        entities = entities_result.scalars().all()
+
+        # Relations between these entities
+        relations_result = await db.execute(
+            select(Relation).where(
+                Relation.source_entity_id.in_(entity_ids),
+                Relation.target_entity_id.in_(entity_ids),
+            )
+        )
+        relations = relations_result.scalars().all()
+    else:
+        entities_result = await db.execute(select(KnowledgeEntity))
+        entities = entities_result.scalars().all()
+
+        relations_result = await db.execute(select(Relation))
+        relations = relations_result.scalars().all()
 
     nodes = []
     seen = set()
@@ -48,21 +86,33 @@ async def get_knowledge_graph(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/api/analytics/sentiment")
-async def get_sentiment_trend(days: int = Query(30, ge=1, le=365), db: AsyncSession = Depends(get_db)):
-    """Return sentiment trend data for the past N days."""
+async def get_sentiment_trend(
+    days: int = Query(30, ge=1, le=365),
+    big_tag: str = Query(None, description="Filter by big_tag"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return sentiment trend data for the past N days. Optionally filter by big_tag."""
     from datetime import datetime, timedelta
 
     start_date = datetime.utcnow() - timedelta(days=days)
 
-    memories_result = await db.execute(
-        select(Memory).where(
-            Memory.created_at >= start_date,
-            Memory.sentiment.isnot(None),
-        ).order_by(Memory.created_at)
+    stmt = select(Memory).where(
+        Memory.created_at >= start_date,
+        Memory.sentiment.isnot(None),
     )
+
+    if big_tag:
+        try:
+            bt = BigTag(big_tag.upper())
+            stmt = stmt.where(Memory.big_tag == bt)
+        except ValueError:
+            return []
+
+    stmt = stmt.order_by(Memory.created_at)
+
+    memories_result = await db.execute(stmt)
     memories = memories_result.scalars().all()
 
-    # Group by date
     trend_map = {}
     for m in memories:
         date_key = m.created_at.strftime("%Y-%m-%d") if m.created_at else ""

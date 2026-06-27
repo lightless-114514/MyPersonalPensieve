@@ -1,8 +1,8 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getRecentMemories } from '@/api'
-import { formatDate, typeIcon, sentimentColor } from '@/lib/utils'
+import { formatDate, typeIcon, sentimentColor, bigTagClass, bigTagLabel } from '@/lib/utils'
 import { Brain, ArrowRight } from 'lucide-vue-next'
 import { useGreeting } from '@/composables/useGreeting'
 
@@ -41,8 +41,19 @@ const { greeting } = useGreeting()
           v-for="m in memories"
           :key="m.id"
           :to="`/memories/${m.id}`"
-          class="block p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors"
+          class="block p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors relative"
         >
+          <!-- Big tag badge -->
+          <div
+            v-if="m.bigTag"
+            :class="[
+              'absolute -top-0.5 -right-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg rounded-tr-lg text-xs font-semibold border',
+              bigTagClass(m.bigTag)
+            ]"
+          >
+            {{ bigTagLabel(m.bigTag) }}
+          </div>
+
           <div class="flex items-start justify-between gap-3">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-1">

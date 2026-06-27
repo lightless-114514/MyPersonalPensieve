@@ -2,7 +2,7 @@
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getMemory, deleteMemory } from '@/api'
-import { formatDate, typeIcon, sentimentColor, sentimentBg } from '@/lib/utils'
+import { formatDate, typeIcon, sentimentColor, sentimentBg, bigTagClass, bigTagLabel } from '@/lib/utils'
 import { ArrowLeft, Trash2, ExternalLink } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -54,6 +54,18 @@ const deleteMutation = useMutation({
 
         <div class="flex items-center gap-3 text-sm text-muted-foreground">
           <span>{{ formatDate(memory.createdAt) }}</span>
+
+          <!-- Big tag badge -->
+          <span
+            v-if="memory.bigTag"
+            :class="[
+              'inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+              bigTagClass(memory.bigTag)
+            ]"
+          >
+            {{ bigTagLabel(memory.bigTag) }}
+          </span>
+
           <span v-if="memory.sentiment" :class="['px-2 py-0.5 rounded-full text-xs font-medium', sentimentColor(memory.sentiment), sentimentBg(memory.sentiment)]">
             {{ memory.sentiment === 'POSITIVE' ? '😊 积极' : memory.sentiment === 'NEGATIVE' ? '😔 消极' : '😐 中性' }}
           </span>

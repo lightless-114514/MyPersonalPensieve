@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
@@ -264,7 +264,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         <div
           v-if="m.bigTag"
           :class="[
-            'absolute -top-0.5 -right-0.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-bl-lg rounded-tr-lg text-xs font-semibold border',
+            'absolute -top-0.5 -left-0.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-br-lg rounded-tl-lg text-xs font-semibold border',
             bigTagClass(m.bigTag)
           ]"
         >

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { getRecentMemories } from '@/api'
@@ -47,7 +47,7 @@ const { greeting } = useGreeting()
           <div
             v-if="m.bigTag"
             :class="[
-              'absolute -top-0.5 -right-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-bl-lg rounded-tr-lg text-xs font-semibold border',
+              'absolute -top-0.5 -left-0.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-br-lg rounded-tl-lg text-xs font-semibold border',
               bigTagClass(m.bigTag)
             ]"
           >

@@ -1,4 +1,42 @@
-﻿# MyPersonalPensieve - 开发日志
+# MyPersonalPensieve - 开发日志
+
+## 2026-06-28 — 知识图谱节点悬浮 tooltip + TypeScript 类型修复
+
+### 知识图谱节点悬浮显示完整词条
+
+力导向图和思维导图模式下，节点名称超过截断长度时显示省略号，鼠标悬浮显示完整名称。
+
+**实现细节：**
+- 力导向图：节点名称超过 12 字符截断为 `前11字符…`
+- 思维导图：节点名称超过 14 字符截断为 `前13字符…`
+- 自定义 tooltip 组件（替代浏览器原生 `<title>`）
+  - 显示在鼠标右上角（x 向右偏移 12px，y 向上偏移 36px）
+  - 跟随鼠标移动
+  - 边界检测防止超出可视区域
+  - 使用 shadcn-vue 样式变量（bg-popover / text-popover-foreground / border-border）
+
+**前端改动：**
+- `GraphPage.vue`：
+  - 新增 `tooltip` ref + `showTooltip / moveTooltip / hideTooltip` 函数
+  - 力导向图节点添加 `mouseenter / mousemove / mouseleave` 事件
+  - 思维导图节点添加同样的事件
+  - 新增 tooltip DOM 元素（绝对定位，跟随鼠标）
+
+### TypeScript 类型修复
+
+修复 32 个类型错误，`vue-tsc --noEmit` 检查通过。
+
+**修复内容：**
+| 文件 | 问题 | 修复 |
+|------|------|------|
+| `package.json` | d3 缺少类型声明 | 安装 `@types/d3` |
+| `GraphPage.vue` | d3 回调参数隐式 any | 添加显式 `any` 类型（d3 类型系统复杂） |
+| `HomePage.vue` | `m.createdAt` 可能为 undefined | `m.createdAt || ''` |
+| `MemoriesPage.vue` | 同上 | `m.createdAt || ''` |
+| `MemoryDetailPage.vue` | 同上 | `memory.createdAt || ''` |
+| `stores/memory.ts` | `new Date(undefined)` 报错 | `new Date(b.createdAt || 0)` |
+
+---
 
 ## 2026-06-27 — 新增彩色大标签分类 & 记忆编辑功能 & 图谱/分析按大标签筛选
 

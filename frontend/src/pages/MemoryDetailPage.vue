@@ -132,7 +132,7 @@ const deleteMutation = useMutation({
         </div>
 
         <div class="flex items-center gap-3 text-sm text-muted-foreground">
-          <span>{{ formatDate(memory.createdAt) }}</span>
+          <span>{{ formatDate(memory.createdAt || '') }}</span>
           <span
             v-if="memory.bigTag"
             :class="[

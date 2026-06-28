@@ -282,7 +282,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
             </div>
             <p class="text-sm text-muted-foreground line-clamp-2">{{ m.content }}</p>
           </div>
-          <span class="text-xs text-muted-foreground shrink-0">{{ formatDate(m.createdAt) }}</span>
+          <span class="text-xs text-muted-foreground shrink-0">{{ formatDate(m.createdAt || '') }}</span>
         </div>
         <div class="flex gap-2 mt-2 flex-wrap" v-if="m.tags?.length">
           <template v-for="(tag, i) in m.tags" :key="tag">

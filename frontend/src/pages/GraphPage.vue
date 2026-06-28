@@ -10,6 +10,43 @@ const container = ref<HTMLDivElement>()
 const layoutMode = ref<'force' | 'tree'>('force')
 const filterBigTag = ref<BigTagCategory | ''>('')
 
+const tooltip = ref({ visible: false, x: 0, y: 0, text: '' })
+
+function showTooltip(event: MouseEvent, text: string) {
+  if (!container.value) return
+  tooltip.value = {
+    visible: true,
+    x: 0,
+    y: 0,
+    text,
+  }
+  _positionTooltip(event)
+}
+
+function moveTooltip(event: MouseEvent) {
+  if (!tooltip.value.visible || !container.value) return
+  _positionTooltip(event)
+}
+
+function _positionTooltip(event: MouseEvent) {
+  if (!container.value) return
+  const rect = container.value.getBoundingClientRect()
+  const tipW = 200
+  const tipH = 28
+  let x = event.clientX - rect.left + 12
+  let y = event.clientY - rect.top - tipH - 8
+  x = Math.min(x, rect.width - tipW - 8)
+  x = Math.max(x, 8)
+  y = Math.min(y, rect.height - tipH - 8)
+  y = Math.max(y, 8)
+  tooltip.value.x = x
+  tooltip.value.y = y
+}
+
+function hideTooltip() {
+  tooltip.value.visible = false
+}
+
 const { data: graph } = useQuery({
   queryKey: computed(() => ['knowledge-graph', filterBigTag.value]),
   queryFn: () => getKnowledgeGraph(filterBigTag.value || undefined),
@@ -136,8 +173,8 @@ function renderForce() {
 
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.3, 3])
-    .on('zoom', (event) => {
-      g.attr('transform', event.transform)
+    .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+      g.attr('transform', event.transform as any)
     })
   svg.call(zoom)
 
@@ -148,7 +185,7 @@ function renderForce() {
 
   const color = d3.scaleOrdinal(d3.schemeCategory10)
 
-  simulation = d3.forceSimulation(nodes)
+  simulation = d3.forceSimulation(nodes as any)
     .force('link', d3.forceLink(links).id((d: any) => d.id).distance(100))
     .force('charge', d3.forceManyBody().strength(-300))
     .force('center', d3.forceCenter(width / 2, height / 2))
@@ -168,14 +205,21 @@ function renderForce() {
 
   node.append('circle')
     .attr('r', 8)
-    .attr('fill', (d) => color(d.group))
+    .attr('fill', (d: any) => color(d.group))
 
   node.append('text')
-    .text((d) => d.name)
+    .text((d: any) => { const n = d.name; return n.length > 12 ? n.slice(0, 11) + '…' : n })
     .attr('x', 12)
     .attr('y', 4)
     .attr('font-size', '11px')
     .attr('fill', 'hsl(var(--foreground))')
+    .style('pointer-events', 'none')
+
+  node
+    .style('cursor', 'pointer')
+    .on('mouseenter', function(event: MouseEvent, d: any) { showTooltip(event, d.name) })
+    .on('mousemove', function(event: MouseEvent) { moveTooltip(event) })
+    .on('mouseleave', function() { hideTooltip() })
 
   simulation.on('tick', () => {
     link
@@ -184,7 +228,7 @@ function renderForce() {
       .attr('x2', (d: any) => d.target.x)
       .attr('y2', (d: any) => d.target.y)
 
-    node.attr('transform', (d) => `translate(${d.x},${d.y})`)
+    node.attr('transform', (d: any) => `translate(${d.x},${d.y})`)
   })
 }
 
@@ -210,15 +254,15 @@ function renderTree() {
 
   const zoom = d3.zoom<SVGSVGElement, unknown>()
     .scaleExtent([0.3, 3])
-    .on('zoom', (event) => {
-      g.attr('transform', event.transform)
+    .on('zoom', (event: d3.D3ZoomEvent<SVGSVGElement, unknown>) => {
+      g.attr('transform', event.transform as any)
     })
   svg.call(zoom)
 
   const root = d3.hierarchy<any>(rootData)
   const treeLayout = d3.tree<any>()
     .size([height - 80, width - 200])
-    .separation((a, b) => (a.parent?.data.id === b.parent?.data.id ? 1.2 : 1.8))
+    .separation((a: any, b: any) => (a.parent?.data.id === b.parent?.data.id ? 1.2 : 1.8))
   treeLayout(root)
 
   const color = d3.scaleOrdinal(d3.schemeCategory10)
@@ -231,38 +275,44 @@ function renderTree() {
     .attr('stroke', 'hsl(var(--border))')
     .attr('stroke-width', 1.5)
     .attr('d', d3.linkHorizontal<any, any>()
-      .x((d) => d.y)
-      .y((d) => d.x))
+      .x((d: any) => d.y)
+      .y((d: any) => d.x))
 
   const node = g.append('g')
     .selectAll('g')
     .data(root.descendants())
     .join('g')
-    .attr('transform', (d) => `translate(${d.y},${d.x})`)
+    .attr('transform', (d: any) => `translate(${d.y},${d.x})`)
 
   node.append('circle')
-    .attr('r', (d) => d.data.id === '__virtual__' ? 0 : (d.depth === 1 ? 10 : 6))
-    .attr('fill', (d) => color(d.data.group ?? 0))
+    .attr('r', (d: any) => d.data.id === '__virtual__' ? 0 : (d.depth === 1 ? 10 : 6))
+    .attr('fill', (d: any) => color(d.data.group ?? 0))
     .attr('stroke', 'hsl(var(--background))')
     .attr('stroke-width', 2)
 
   node.append('text')
-    .text((d) => { const n = d.data.name; return n.length > 14 ? n.slice(0, 13) + '…' : n })
-    .attr('x', (d) => d.children ? -12 : 12)
+    .text((d: any) => { const n = d.data.name; return n.length > 14 ? n.slice(0, 13) + '…' : n })
+    .attr('x', (d: any) => d.children ? -12 : 12)
     .attr('y', 4)
-    .attr('text-anchor', (d) => d.children ? 'end' : 'start')
+    .attr('text-anchor', (d: any) => d.children ? 'end' : 'start')
     .attr('font-size', '11px')
     .attr('fill', 'hsl(var(--foreground))')
-    .attr('opacity', (d) => d.data.id === '__virtual__' ? 0 : 1)
+    .attr('opacity', (d: any) => d.data.id === '__virtual__' ? 0 : 1)
+    .style('pointer-events', 'none')
 
-  node.append('title')
-    .text((d) => d.data.name)
+  node
+    .style('cursor', 'pointer')
+    .on('mouseenter', function(event: MouseEvent, d: any) {
+      if (d.data.id !== '__virtual__') showTooltip(event, d.data.name)
+    })
+    .on('mousemove', function(event: MouseEvent) { moveTooltip(event) })
+    .on('mouseleave', function() { hideTooltip() })
 
-  const visible = root.descendants().filter((d) => d.data.id !== '__virtual__')
-  const x0 = visible.reduce((min, d) => Math.min(min, d.x), Infinity)
-  const x1 = visible.reduce((max, d) => Math.max(max, d.x), -Infinity)
-  const y0 = visible.reduce((min, d) => Math.min(min, d.y), Infinity)
-  const y1 = visible.reduce((max, d) => Math.max(max, d.y), -Infinity)
+  const visible = root.descendants().filter((d: any) => d.data.id !== '__virtual__')
+  const x0 = visible.reduce((min: number, d: any) => Math.min(min, d.x), Infinity)
+  const x1 = visible.reduce((max: number, d: any) => Math.max(max, d.x), -Infinity)
+  const y0 = visible.reduce((min: number, d: any) => Math.min(min, d.y), Infinity)
+  const y1 = visible.reduce((max: number, d: any) => Math.max(max, d.y), -Infinity)
   const treeW = y1 - y0
   const treeH = x1 - x0
   if (treeW > 0 && treeH > 0) {
@@ -282,14 +332,18 @@ function setFilter(bigTag: BigTagCategory | '') {
   filterBigTag.value = filterBigTag.value === bigTag ? '' : bigTag
 }
 
+function handleResize() {
+  renderGraph()
+}
+
 onMounted(() => {
   renderGraph()
-  window.addEventListener('resize', renderGraph)
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   simulation?.stop()
-  window.removeEventListener('resize', renderGraph)
+  window.removeEventListener('resize', handleResize)
 })
 
 watch(graph, () => {
@@ -345,13 +399,20 @@ watch(layoutMode, () => {
 
     <div
       ref="container"
-      class="w-full h-[calc(100vh-14rem)] rounded-lg border border-border bg-card"
+      class="w-full h-[calc(100vh-14rem)] rounded-lg border border-border bg-card relative"
     >
       <div
         v-if="!graph?.nodes?.length"
         class="flex items-center justify-center h-full text-muted-foreground"
       >
         暂无图谱数据。添加更多记忆后，AI 会自动提取实体和关系。
+      </div>
+      <div
+        v-if="tooltip.visible"
+        class="absolute z-50 px-3 py-1.5 text-xs bg-popover text-popover-foreground rounded-md border border-border shadow-lg pointer-events-none max-w-xs"
+        :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
+      >
+        {{ tooltip.text }}
       </div>
     </div>
   </div>

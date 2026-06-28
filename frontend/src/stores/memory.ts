@@ -22,7 +22,7 @@ export const useMemoryStore = defineStore('memory', () => {
 
   const recentMemories = computed(() =>
     [...memories.value]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
       .slice(0, 10)
   )
 

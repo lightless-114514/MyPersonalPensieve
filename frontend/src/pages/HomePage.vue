@@ -62,7 +62,7 @@ const { greeting } = useGreeting()
               </div>
               <p class="text-sm text-muted-foreground line-clamp-2">{{ m.content }}</p>
             </div>
-            <span class="text-xs text-muted-foreground shrink-0">{{ formatDate(m.createdAt) }}</span>
+            <span class="text-xs text-muted-foreground shrink-0">{{ formatDate(m.createdAt || '') }}</span>
           </div>
           <div class="flex gap-2 mt-2" v-if="m.tags?.length">
             <span

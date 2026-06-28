@@ -1,3 +1,54 @@
+﻿# MyPersonalPensieve - 开发日志
+
+## 2026-06-27 — 新增彩色大标签分类 & 记忆编辑功能 & 图谱/分析按大标签筛选
+
+### 大标签功能
+
+新增四种彩色大标签分类，区别于普通小标签：
+
+| 大标签 | 颜色 | 图标 |
+|--------|------|------|
+| 知识点 (KNOWLEDGE_POINT) | 蓝色 | 📚 |
+| 随心记述 (FREEFORM_NOTE) | 翠绿 | ✍️ |
+| 灵感闪现 (INSPIRATION_FLASH) | 琥珀 | 💡 |
+| 决策纠结 (DECISION_DILEMMA) | 玫红 | ⚖️ |
+
+**后端改动：**
+- `models/memory.py`：新增 `BigTag` 枚举，`Memory` 表新增 `big_tag` 可选列
+- `schemas/memory.py`：`MemoryRequest` / `MemoryResponse` 新增 `big_tag` 字段
+- `services/memory_service.py`：创建/更新记忆时解析并保存 `big_tag`
+- `routes/analytics.py`：`/api/graph` 和 `/api/analytics/sentiment` 新增 `?big_tag=` 查询参数
+- `alembic/versions/66137253b388_add_big_tag_to_memory.py`：迁移文件
+
+**前端改动：**
+- `types/index.ts`：新增 `BigTagCategory` 类型，`Memory` 接口添加 `bigTag`
+- `lib/utils.ts`：新增 `BIG_TAG_CONFIG`、`bigTagClass()`、`bigTagLabel()` 工具函数
+- `pages/MemoriesPage.vue`：创建表单新增彩色大标签选择器；记忆卡片左上角显示大标签角标
+- `pages/MemoryDetailPage.vue`：详情页头部显示大标签徽章
+- `pages/HomePage.vue`：首页记忆卡片左上角显示大标签角标
+- `pages/GraphPage.vue`：新增大标签筛选按钮行，可切换查看全部/特定大标签的知识图谱
+- `pages/AnalyticsPage.vue`：新增大标签筛选按钮行，情感趋势可按大标签过滤
+
+### 记忆编辑功能
+
+用户现在可以修改已有记忆的所有属性：
+
+**后端改动：**
+- `schemas/memory.py`：新增 `UpdateMemoryRequest`（所有字段可选）
+- `routes/memories.py`：新增 `PUT /api/memories/{id}` 端点
+- `services/memory_service.py`：新增 `update()` 方法，支持修改标题/内容/大标签/小标签/来源URL
+
+**前端改动：**
+- `api/index.ts`：新增 `updateMemory()` API 调用
+- `pages/MemoryDetailPage.vue`：新增编辑按钮（笔图标），点击展开编辑表单，可修改：标题、大标签、来源URL、内容、小标签
+
+### 修复
+
+- `GraphPage.vue` / `AnalyticsPage.vue`：修复大标签筛选 `queryKey` 不响应式的问题，改用 `computed(() => [...])`
+- `MemoriesPage.vue` / `HomePage.vue`：大标签角标从右上角移到左上角，避免与日期重叠
+
+---
+
 ## 2026-06-25 — 思维导图修复多连通分量丢失 & 长词条截断 & 首页动态问候语
 
 ### 思维导图多连通分量丢失
@@ -50,6 +101,37 @@
 - `Vue3` 和 `橘福福` 在同一 x 坐标，确认两者深度相同、互为兄弟
 - 力导向图模式不受影响，`橘福福` 仍是单独的悬浮节点
 
+## 2026-06-24 — 修复知识图谱与情感分析（接入实体提取）
+
+### 理由
+
+知识图谱和情感分析页面始终为空。根因是后端创建记忆时从未调用 LLM 实体提取，`KnowledgeEntity`、`Relation`、`Memory.sentiment` 始终无数据。
+
+### 根因
+
+- `memory_service.create()` 只做了 embedding，没有调用 `llm_service.extract_entities()`
+- `llm_service` 使用 `with_structured_output()`，DeepSeek 不兼容 OpenAI parse 端点，静默失败
+- LLM 调用无超时保护，网络不通时会卡住整个请求
+
+### 后端修复
+
+- `memory_service.py`：
+  - 新增 `_process_background()`，创建记忆后自动提取实体、情感、生成 embedding
+  - 实体写入 `KnowledgeEntity` 表，记忆与实体关联写入 `MemoryEntity`
+  - 连续实体间创建 `Relation`（co-occurrence 关系），知识图谱有连线
+  - 情感写入 `Memory.sentiment`，情感分析页面有数据
+  - 使用独立 session（`async_session_factory()`）避免 greenlet 错误
+- `llm_service.py`：
+  - `extract_entities()` 从 `with_structured_output()` 改为普通 chat + JSON 手动解析，兼容 DeepSeek
+  - 所有 LLM HTTP 调用加上 `httpx.Timeout(60.0)` 超时
+  - `generate_embedding()` 从 ChromaDB 的 embedding function 改为调用 DeepSeek/OpenAI embeddings API
+
+### 验证
+
+- 知识图谱页面有 59 个节点和连线
+- 情感分析页面有趋势折线图
+- 记忆详情页显示情感标签
+
 ## 2026-06-23 — 接入 DeepSeek v4-flash & 精简记忆类型
 
 ### 理由
@@ -72,116 +154,34 @@
 - `frontend/src/lib/utils.ts`：typeIcon 只保留 TEXT / IMAGE
 - `frontend/src/pages/MemoriesPage.vue`：下拉选项和 LINK 专属输入框已移除
 
-# MyPersonalPensieve - 开发日志
-## 2026-06-24 — 修复知识图谱与情感分析（接入实体提取）
+---
+
+## 2026-06-18 — 本地化重构：MySQL/Redis/Qdrant → SQLite + ChromaDB + 内存缓存
 
 ### 理由
 
-知识图谱和情感分析页面始终为空。根因是后端创建记忆时从未调用 LLM 实体提取，`KnowledgeEntity`、`Relation`、`Memory.sentiment` 始终无数据。
+Docker 依赖太重（MySQL + Redis + Qdrant 三个容器），本地开发启动链路长。目标：零依赖直接运行，同时保留 Docker 模式作为可选方案。
 
-### 根因
+### 数据库替换
 
-- `memory_service.create()` 只做了 embedding，没有调用 `llm_service.extract_entities()`
-- `llm_service` 使用 `with_structured_output()`，DeepSeek 不兼容 OpenAI parse 端点，静默失败
-- LLM 调用无超时保护，网络不通时会卡住整个请求
-
-### 后端修复
-
-- `memory_service.py`：
-  - 新增 `_process_background()`，创建记忆后自动提取实体、情感、生成 embedding
-  - 实体写入 `KnowledgeEntity` 表，记忆与实体关联写入 `MemoryEntity`
-  - 连续实体间创建 `Relation`（co-occurrence 关系），知识图谱有连线
-  - 情感写入 `Memory.sentiment`，情感分析页面有数据
-  - 使用独立 session（`async_session_factory()`）避免 greenlet 错误
-- `llm_service.py`：
-  - `extract_entities()` 从 `with_structured_output()` 改为 JSON 字符串解析（DeepSeek 兼容）
-  - prompt 使用 jinja2 转义 `{{}}` 避免 LangChain 模板变量冲突
-  - 新增 `openai_proxy` 支持 VPN 代理环境
-  - `extract_entities` 和 `generate_embedding` 均加 `asyncio.wait_for` 超时保护（20s/15s）
-
-### 测试
-
-- 生成 8 条 Vue3 知识记忆（Composition API、响应式原理、组件通信、Vue Router、生命周期、Pinia、Teleport/Suspense、性能优化）
-- 实体提取成功：59 个节点、65 条关系（Vue3、Evan You、Composition API、Pinia 等）
-- 情感分析：6 条 NEUTRAL、5 条 POSITIVE，趋势图正常渲染
-
-## 2026-06-24 — 修复标签选择器（下拉不显示 / 无法添加 / 输入卡顿）
-
-### 理由
-
-标签功能此前完全不可用：下拉框不显示任何标签、无法选择已有标签、输入框偶尔无法输入。根因是 vue-query 的 Ref 解包问题以及下拉框使用了未定义的 Tailwind 颜色类。
-
-### 根因
-
-- `suggestions` computed 中直接对 `allTags`（vue-query 返回的 **Ref 对象**）调用 `.filter()`，等于在 Ref 上调用数组方法，抛出 `TypeError` 导致建议列表永远为空
-- 下拉框使用了 `bg-popover` 颜色类，但 `tailwind.config.js` 未定义 `popover` 颜色，背景透明导致看不见
-- `queryKey` 使用了静态的 `tagText.value`，搜索时不会触发重新查询
-
-### 前端修复
-
-- `frontend/src/pages/MemoriesPage.vue`：
-  - computed 改为 `allTags.value` 先解包 Ref 再 `.filter()`，标签列表正常显示
-  - `queryKey` 改为静态 `['tags']`，一次性加载全部标签，搜索改为本地即时过滤（`toLowerCase().includes()`）
-  - 下拉框背景从 `bg-popover` 改为 `bg-card`（已定义的颜色类）
-  - 回车添加标签时用 `[...selectedTags]` 批量赋值，减少重渲染次数
-  - 点击标签容器时调用 `openTagDropdownAndFocus` 确保 input 获得焦点
-  - 新增 `staleTime: 30_000` 避免短时间内重复请求
-
-### 后端修复
-
-- `backend/app/services/memory_service.py`：
-  - 标签创建改为 `memory.tags.append(mt)` 直接挂到关系列表，确保 `commit` 后 `_to_response` 能取到标签
-  - 移除无效的 `db.refresh(memory, attribute_names=["tags"])`（`attribute_names` 不支持 relationship 字段）
-
-### 附带修复
-
-- `frontend/src/lib/utils.ts`：修复 emoji 和中文相对时间显示乱码（`??` → `📝`、`刚刚`、`分钟前` 等）
-- `frontend/src/pages/HomePage.vue`：首页按钮文案根据有无记忆动态切换
-- `frontend/src/types/index.ts`、`frontend/src/api/index.ts`：新增 `TagItem` 类型和 `getTags()` API
-
-
-## 2026-06-23 — 重构为 Electron 桌面应用（SQLite + ChromaDB）
-
-### 理由
-
-Docker 微服务架构对终端用户部署门槛太高（需要装 Docker、启动 3 个容器）。改为 Electron 单体桌面应用，用户双击即可运行，数据本地存储，零配置。
-
-### 架构变更
-
-| 组件 | 之前 | 之后 |
+| 原 | 新 | 说明 |
 |------|------|------|
-| 数据库 | MySQL 8.0 (Docker) | SQLite (aiosqlite，嵌入式) |
-| 向量存储 | Qdrant (Docker) | ChromaDB (本地持久化) |
-| 缓存 | Redis (Docker) | 内存缓存 (同接口，无外部依赖) |
-| 部署方式 | docker compose | Electron + PyInstaller 单体打包 |
-| 前端 | Vite dev server | 支持 dev (proxy) + desktop (完整 URL) 两种模式 |
+| MySQL + asyncmy | SQLite + aiosqlite | 零配置，单文件数据库 |
+| Redis | 内存缓存 | 限流/缓存用 Python dict 替代 |
+| Qdrant | ChromaDB | 向量存储嵌入进程内 |
 
-### 新增文件
+### 核心改动
 
-| 文件 | 说明 |
-|------|------|
-| electron/main.js | Electron 主进程：启动后端子进程 + 创建窗口 |
-| electron/preload.js | 预加载脚本，暴露 window.pensieve 环境信息 |
-| electron/package.json | electron-builder 配置（NSIS 安装包 + portable） |
-| electron/scripts/build.js | 一键构建脚本（前端 + 后端 + 打包） |
-| backend/run.py | PyInstaller 打包入口，输出 PENSIEVE_STARTING 信号 |
-| backend/pensieve_backend.spec | PyInstaller spec（含 ChromaDB 隐式依赖收集） |
-| frontend/.env.development | 开发模式 API base 配置 |
-
-### 后端改动
-
-- config.py：新增 _default_data_dir() 自动解析数据目录（开发模式 backend/data，打包后可执行文件同级 data）
-- db/session.py：SQLite 连接参数 check_same_thread=False；新增 init_db() 首次启动自动建表（替代 alembic migrate）
-- main.py：lifespan 中调用 init_db() + ensure_collection()
-- qdrant_service.py：整文件改为 ChromaDB 实现，保持方法签名不变
-- redis_service.py：整文件改为内存缓存实现（_MemoryStore），保持方法签名不变
-- pyproject.toml：依赖从 asyncmy/pymysql/redis/qdrant-client 换为 aiosqlite/chromadb，dev 加 pyinstaller
+- `config.py`：新增 Settings 类 (pydantic-settings)，支持 .env 和环境变量；is_docker 自动检测
+- `db/session.py`：数据库 URL 根据 is_docker 自动切换 (mysql+asyncmy:// vs sqlite+aiosqlite://)
+- `redis_service.py`：整文件改为内存缓存实现（_MemoryStore），保持方法签名不变
+- `pyproject.toml`：依赖从 asyncmy/pymysql/redis/qdrant-client 换为 aiosqlite/chromadb，dev 加 pyinstaller
 
 ### 前端改动
 
-- api/index.ts：baseURL 改为 import.meta.env.VITE_API_BASE || '/api'，支持桌面端完整 URL
-- env.d.ts：声明 ImportMetaEnv 和 window.pensieve 类型
-- package.json：build 去掉 vue-tsc -b（加快构建），新增 build:strict
+- `api/index.ts`：baseURL 改为 `import.meta.env.VITE_API_BASE || '/api'`，支持桌面端完整 URL
+- `env.d.ts`：声明 ImportMetaEnv 和 window.pensieve 类型
+- `package.json`：build 去掉 vue-tsc -b（加快构建），新增 build:strict
 
 ### .gitignore 更新
 

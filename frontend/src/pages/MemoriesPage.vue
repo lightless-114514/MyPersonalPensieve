@@ -2,15 +2,16 @@
 import { ref, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { getMemories, createMemory, getTags } from '@/api'
+import { getMemories, createMemory, getTags, toggleFavoriteMemory } from '@/api'
 import { formatDate, typeIcon, sentimentColor, BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
-import { Search, Plus, X, Loader2, Tag } from 'lucide-vue-next'
+import { Search, Plus, X, Loader2, Tag, Star } from 'lucide-vue-next'
 
 const route = useRoute()
 const queryClient = useQueryClient()
 
 const page = ref(0)
+const showFavoritesOnly = ref(false)
 const showCreate = ref(route.query.new === 'true')
 const isUploading = ref(false)
 
@@ -99,8 +100,18 @@ function toggleExpand(id: string) {
 }
 
 const { data, isLoading } = useQuery({
-  queryKey: ['memories', page.value],
-  queryFn: () => getMemories({ page: page.value, size: 20 }),
+  queryKey: ['memories', page.value, showFavoritesOnly.value],
+  queryFn: () => getMemories({ page: page.value, size: 20, favorite: showFavoritesOnly.value ? true : undefined }),
+})
+
+const favoriteMutation = useMutation({
+  mutationFn: async ({ id, favorite }: { id: string; favorite: boolean }) => {
+    return toggleFavoriteMemory(id, favorite)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['memories'] })
+    queryClient.invalidateQueries({ queryKey: ['recent-memories'] })
+  },
 })
 
 const createMutation = useMutation({
@@ -134,6 +145,12 @@ function resetForm() {
   tagText.value = ''
 }
 
+
+function toggleFavorite(e: MouseEvent, id: string, current: boolean) {
+  e.preventDefault()
+  e.stopPropagation()
+  favoriteMutation.mutate({ id, favorite: !current })
+}
 const totalPages = computed(() => data.value?.total_pages ?? 1)
 </script>
 
@@ -141,14 +158,28 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
   <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">记忆</h1>
-      <button
-        @click="showCreate = !showCreate"
+      <div class="flex items-center gap-2">
+        <button
+          @click="showFavoritesOnly = !showFavoritesOnly"
+          :class="[
+            'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
+            showFavoritesOnly
+              ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+              : 'border-border bg-card text-muted-foreground hover:bg-accent'
+          ]"
+        >
+          <Star class="w-4 h-4" :class="showFavoritesOnly ? 'fill-yellow-500 text-yellow-500' : ''" />
+          {{ showFavoritesOnly ? '已收藏' : '全部' }}
+        </button>
+        <button
+          @click="showCreate = !showCreate"
         class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
       >
         <Plus v-if="!showCreate" class="w-4 h-4" />
         <X v-else class="w-4 h-4" />
         {{ showCreate ? '取消' : '新建' }}
       </button>
+      </div>
     </div>
 
     <div v-if="showCreate" class="p-6 rounded-lg border border-border bg-card space-y-4">
@@ -295,6 +326,17 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
             收起
           </button>
         </div>
+        <!-- Favorite star button -->
+        <button
+          @click.prevent="toggleFavorite($event, m.id, !!m.favorite)"
+          class="absolute bottom-2 right-2 p-1.5 rounded-md transition-colors hover:bg-accent"
+          :title="m.favorite ? '取消收藏' : '收藏'"
+        >
+          <Star
+            class="w-4 h-4 transition-colors"
+            :class="m.favorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'"
+          />
+        </button>
       </router-link>
       <div v-if="!data?.content?.length" class="text-center py-16 text-muted-foreground">暂无记忆</div>
     </div>

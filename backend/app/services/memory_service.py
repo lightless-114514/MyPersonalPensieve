@@ -32,6 +32,7 @@ class MemoryService:
             type=mem_type,
             source_url=request.source_url,
             big_tag=big_tag,
+            favorite=request.favorite,
         )
         db.add(memory)
         await db.flush()
@@ -67,6 +68,7 @@ class MemoryService:
             processing_status=memory.processing_status.value if memory.processing_status else "PENDING",
             tags=tag_names,
             big_tag=memory.big_tag.value if memory.big_tag else None,
+            favorite=memory.favorite,
             created_at=memory.created_at,
             updated_at=memory.updated_at,
         )
@@ -133,6 +135,8 @@ class MemoryService:
         self, db: AsyncSession, page: int = 0, size: int = 20
     ) -> PagedResponse:
         count_query = select(func.count(Memory.id))
+        if favorite is not None:
+            count_query = count_query.where(Memory.favorite == favorite)
         total = (await db.execute(count_query)).scalar() or 0
 
         query = (
@@ -142,6 +146,9 @@ class MemoryService:
             .offset(page * size)
             .limit(size)
         )
+        if favorite is not None:
+            query = query.where(Memory.favorite == favorite)
+
         result = await db.execute(query)
         memories = result.scalars().all()
 
@@ -218,6 +225,9 @@ class MemoryService:
             memory.type = MemoryType(request.type.upper())
         if request.source_url is not None:
             memory.source_url = request.source_url
+        if request.favorite is not None:
+            memory.favorite = request.favorite
+
         if request.big_tag is not None:
             if request.big_tag == "":
                 memory.big_tag = None
@@ -269,6 +279,7 @@ class MemoryService:
             processing_status=m.processing_status.value if m.processing_status else "PENDING",
             tags=[t.tag for t in m.tags] if m.tags else [],
             big_tag=m.big_tag.value if m.big_tag else None,
+            favorite=m.favorite,
             created_at=m.created_at,
             updated_at=m.updated_at,
         )

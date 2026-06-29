@@ -1,11 +1,11 @@
-﻿<script setup lang="ts">
+﻿﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { getMemory, deleteMemory, updateMemory } from '@/api'
+import { getMemory, deleteMemory, updateMemory, toggleFavoriteMemory } from '@/api'
 import { formatDate, typeIcon, sentimentColor, sentimentBg, bigTagClass, bigTagLabel, BIG_TAG_OPTIONS } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
-import { ArrowLeft, Trash2, ExternalLink, Edit3, Save, X } from 'lucide-vue-next'
+import { ArrowLeft, Trash2, ExternalLink, Edit3, Save, X, Star } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -91,6 +91,22 @@ const deleteMutation = useMutation({
     router.push('/memories')
   },
 })
+
+const favoriteMutation = useMutation({
+  mutationFn: async ({ id, favorite }: { id: string; favorite: boolean }) => {
+    return toggleFavoriteMemory(id, favorite)
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['memory', route.params.id] })
+    queryClient.invalidateQueries({ queryKey: ['memories'] })
+    queryClient.invalidateQueries({ queryKey: ['recent-memories'] })
+  },
+})
+
+function toggleFavorite() {
+  if (!memory.value) return
+  favoriteMutation.mutate({ id: memory.value.id, favorite: !memory.value.favorite })
+}
 </script>
 
 <template>
@@ -114,6 +130,15 @@ const deleteMutation = useMutation({
             <h1 class="text-2xl font-bold">{{ memory.title }}</h1>
           </div>
           <div class="flex items-center gap-1">
+            <button
+              v-if="!isEditing"
+              @click="toggleFavorite()"
+              class="p-2 rounded-lg transition-colors"
+              :class="memory?.favorite ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-500/10' : 'text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10'"
+              :title="memory?.favorite ? '取消收藏' : '收藏'"
+            >
+              <Star class="w-4 h-4" :class="memory?.favorite ? 'fill-yellow-400' : ''" />
+            </button>
             <button
               v-if="!isEditing"
               @click="startEdit()"

@@ -10,6 +10,7 @@ class MemoryRequest(BaseModel):
     source_url: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     big_tag: Optional[str] = None
+    favorite: bool = False
 
 
 class UpdateMemoryRequest(BaseModel):
@@ -20,6 +21,7 @@ class UpdateMemoryRequest(BaseModel):
     source_url: Optional[str] = None
     tags: Optional[list[str]] = None
     big_tag: Optional[str] = None
+    favorite: Optional[bool] = None
 
 
 class MemoryResponse(BaseModel):
@@ -34,6 +36,7 @@ class MemoryResponse(BaseModel):
     processing_status: str
     tags: list[str] = Field(default_factory=list)
     big_tag: Optional[str] = None
+    favorite: bool = False
     created_at: datetime
     updated_at: datetime
 

@@ -1,7 +1,7 @@
 ﻿import uuid
 from datetime import datetime
 from sqlalchemy import (
-    String, Text, Float, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum
+    String, Text, Float, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum, Boolean
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -64,6 +64,7 @@ class Memory(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
     )
+    favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     tags: Mapped[list["MemoryTag"]] = relationship("MemoryTag", cascade="all, delete-orphan")
     memory_entities: Mapped[list["MemoryEntity"]] = relationship("MemoryEntity", back_populates="memory", cascade="all, delete-orphan")

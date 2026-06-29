@@ -1,4 +1,4 @@
-﻿﻿import axios from 'axios'
+﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -57,7 +57,7 @@ export async function updateMemory(id: string, payload: any) {
   return data
 }
 
-export async function getMemories(params: { page?: number; size?: number }) {
+export async function getMemories(params: { page?: number; size?: number; favorite?: boolean }) {
   const { data } = await api.get<SearchResult>('/memories', { params })
   return data
 }
@@ -92,6 +92,11 @@ export async function getSentimentTrend(days: number = 30, bigTag?: string) {
   const { data } = await api.get<SentimentTrend[]>('/analytics/sentiment', {
     params: { days, ...(bigTag ? { big_tag: bigTag } : {}) },
   })
+  return data
+}
+
+export async function toggleFavoriteMemory(id: string, favorite: boolean) {
+  const { data } = await api.put<Memory>(`/memories/${id}`, { favorite })
   return data
 }
 

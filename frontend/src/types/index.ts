@@ -18,6 +18,7 @@
   sentimentScore?: number
   processingStatus?: string
   bigTag?: BigTagCategory | null
+  favorite?: boolean
   createdAt?: string
   updatedAt?: string
   entities?: Entity[]

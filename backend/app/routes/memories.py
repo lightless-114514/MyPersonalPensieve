@@ -60,10 +60,11 @@ async def get_all_memories(
     request: Request,
     page: int = Query(0, ge=0),
     size: int = Query(20, ge=1, le=100),
+    favorite: Optional[bool] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     await check_rate_limit(request)
-    return await memory_service.get_all(db, page, size)
+    return await memory_service.get_all(db, page, size, favorite)
 
 
 @router.get("/recent", response_model=list[MemoryResponse])

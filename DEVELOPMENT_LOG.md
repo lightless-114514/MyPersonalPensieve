@@ -1,5 +1,33 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-06-30 — Bug 修复：记忆列表无法加载 & 收藏筛选失效
+
+### Bug 1：记忆列表空白，API 报错
+
+**根因**：`memory_service.get_all()` 方法签名缺少 `favorite` 参数，但路由层调用时传了 4 个参数，方法体内部也引用了未定义的 `favorite` 变量，导致 `NameError`，`/api/memories` 接口直接 500。
+
+**修复**：
+| 文件 | 改动 |
+|------|------|
+| `services/memory_service.py` | `get_all()` 签名添加 `favorite: Optional[bool] = None` 参数；文件顶部添加 `from typing import Optional` |
+
+### Bug 2：点击「已收藏」筛选按钮无反应
+
+**根因**：`MemoriesPage.vue` 的 `useQuery` 中 `queryKey` 使用了 `page.value` 和 `showFavoritesOnly.value`，这些值在组件初始化时求值后固定，切换收藏状态时 queryKey 不变，不会触发重新请求。
+
+**修复**：
+| 文件 | 改动 |
+|------|------|
+| `pages/MemoriesPage.vue` | `queryKey` 从 `['memories', page.value, showFavoritesOnly.value]` 改为 `['memories', page, showFavoritesOnly]`，让 `@tanstack/vue-query` v5 自动追踪 ref 变化 |
+
+### 其他改动
+| 文件 | 改动 |
+|------|------|
+| `frontend/vite.config.ts` | 添加 `host: '0.0.0.0'` 支持局域网访问 |
+| `start_servers.bat` | vite 启动命令加上 `--host 0.0.0.0` |
+
+---
+
 ## 2026-06-29 — 收藏记忆功能
 
 ### 功能概述

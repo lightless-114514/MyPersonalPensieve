@@ -1,5 +1,6 @@
 import json
 import math
+from typing import Optional
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -132,7 +133,7 @@ class MemoryService:
             pass
 
     async def get_all(
-        self, db: AsyncSession, page: int = 0, size: int = 20
+        self, db: AsyncSession, page: int = 0, size: int = 20, favorite: Optional[bool] = None
     ) -> PagedResponse:
         count_query = select(func.count(Memory.id))
         if favorite is not None:

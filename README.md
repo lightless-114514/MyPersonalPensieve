@@ -1,6 +1,6 @@
 <div align="center">
 
-# SpringNote
+# MyPersonalPensieve
 
 **AI 驱动的个人记忆与知识管理系统**
 
@@ -13,53 +13,39 @@
 
 ---
 
-## 为什么选择 SpringNote
+## 为什么选择 MyPersonalPensieve
 
-市面上的便签软件大多只能帮你保存内容，却很难帮你利用这些内容。SpringNote 因此而生。它不仅能够记录，更能够帮助你整理、沉淀和回顾。通过 AI 自动生成日报、周报和月报，并结合回忆书功能，让过去的记录变成随时可检索、可对话的个人知识资产。
+传统的笔记工具只负责记录，却很难帮你从记录中提取价值。MyPersonalPensieve 不仅存储你的文字、链接和想法，更通过 AI 自动提取实体与关系、分析情感倾向、构建知识图谱，让散落的记忆变成可检索、可可视化的个人知识网络。
 
 ## 核心功能
 
 ### 🏠 首页工作台
 
-独创等级、收益、活跃热力图、快速输入框和今日摘要卡片。
+问候语、最近记忆列表、快速记录入口。
 
-![SpringNote 首页](docs/images/home.png)
+### 📝 记忆管理
 
-### 🤖 AI 智能生成
+支持文字记录的创建、编辑、删除，可添加自定义标签和大标签分类（工作、生活、学习等），支持收藏功能快速标记重要记忆。
 
-在首页快速输入想法，由 AI 自动整理为结构化内容。
+### 🤖 AI 智能处理
 
-### 📝 便签编辑
+接入 OpenAI API，自动从记忆内容中提取知识实体与关系、分析情感倾向，支持自然语言查询记忆。
 
-支持日报、周报、月报等记录类型，提供 Markdown 编辑、预览、代码块高亮和 AI 补全预测。
+### 🕸️ 知识图谱
 
-![SpringNote 便签](docs/images/editor.png)
+基于 D3.js 力导向图和树形布局，可视化展示记忆中的实体与关系网络，支持按大标签筛选。
 
-### 💬 回忆书对话
+### 📊 情感分析
 
-以对话方式检索和整理记忆内容，支持思考过程、工具调用展示与 Markdown 渲染。
+情感趋势图表，按时间范围和大标签查看情感变化，直观了解情绪走向。
 
-![SpringNote 回忆书](docs/images/memory-book.png)
+### ⚙️ 设置
 
-### 📊 自动报告生成
+暗色模式切换、OpenAI API 密钥配置、中英文语言切换。
 
-启动时可按日期补齐缺失的周报/月报，基于已有日报或周报生成总结。
+### 🖥️ 桌面端
 
-### 📈 统计面板
-
-查看记录、活跃度、模型调用和时间范围内的数据概览。
-
-![SpringNote 统计面板](docs/images/analytics.png)
-
-### ⏰ 牛马时钟
-
-支持自定义日薪和工作时长，自动计算时薪并作为组件展示在页面上。
-
-![SpringNote 组件](docs/images/clock-widget.png)
-
-### 🖥️ 桌面端极致体验
-
-支持自定义 Windows 标题栏、托盘、开机自启动、全局快捷键、桌面状态组件和系统字体切换。
+基于 Electron 封装，支持独立窗口运行。
 
 ---
 
@@ -67,7 +53,7 @@
 
 ### 下载安装
 
-通过 GitHub 下载，请前往 [Release 页](https://github.com/lightless-114514/MyPersonalPensieve/releases) 下载 SpringNote。
+通过 GitHub 下载，请前往 [Release 页](https://github.com/lightless-114514/MyPersonalPensieve/releases) 下载最新版本。
 
 ### 供应商配置
 
@@ -77,19 +63,11 @@
 
 请填写 `https://api.deepseek.com/beta`
 
-![第一步](docs/images/step1.png)
-
 **② 添加模型 `deepseek-v4-flash`**
 
-![第二步](docs/images/step2.png)
+**③ 编辑模型参数**
 
-**③ 编辑模型**
-
-![第三步](docs/images/step3.png)
-
-**④ 选择默认模型**
-
-![第四步](docs/images/step4.png)
+**④ 在设置中选择默认模型**
 
 ---
 
@@ -115,6 +93,8 @@
 | UI 组件 | **shadcn-vue** |
 | 样式 | **Tailwind CSS** |
 | 构建工具 | **Vite** |
+| 数据请求 | **TanStack Query** |
+| 图表 | **D3.js** |
 
 ### 桌面端
 
@@ -139,18 +119,6 @@ cd frontend
 npm install
 npm run dev
 ```
-
----
-
-## 🌍 社区
-
-QQ 群组：**1 群：463423961**
-
----
-
-## ❤️ Special Thanks
-
-特别感谢所有 Contributors 和社区成员对 SpringNote 的支持 ❤️
 
 ---
 

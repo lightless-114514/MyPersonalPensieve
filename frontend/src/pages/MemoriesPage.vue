@@ -100,7 +100,7 @@ function toggleExpand(id: string) {
 }
 
 const { data, isLoading } = useQuery({
-  queryKey: ['memories', page.value, showFavoritesOnly.value],
+  queryKey: ['memories', page, showFavoritesOnly],
   queryFn: () => getMemories({ page: page.value, size: 20, favorite: showFavoritesOnly.value ? true : undefined }),
 })
 

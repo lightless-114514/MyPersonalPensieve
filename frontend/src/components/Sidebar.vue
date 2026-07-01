@@ -12,7 +12,7 @@ import {
   Sun,
   Moon,
   Plus,
-  RotateCw,
+  ArrowUpCircle,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -38,7 +38,7 @@ function isActive(path: string) {
 </script>
 
 <template>
-  <aside class="w-56 border-r border-border bg-card flex flex-col shrink-0">
+  <aside class="w-64 border-r border-border bg-card flex flex-col shrink-0">
     <!-- Logo -->
     <div class="p-4 border-b border-border">
       <div class="flex items-center gap-2">
@@ -66,7 +66,7 @@ function isActive(path: string) {
     </nav>
 
     <!-- 经验系统 -->
-    <div class="px-3 py-2 border-t border-border relative" :class="{ shake: exp.isShaking }">
+    <div class="px-3 py-3 border-t border-border relative" :class="{ shake: exp.isShaking }">
       <!-- 全屏闪白 -->
       <Transition name="flash">
         <div v-if="exp.isFlashing" class="fixed inset-0 bg-white/80 z-[9999] pointer-events-none" />
@@ -79,15 +79,21 @@ function isActive(path: string) {
           :key="ft.id"
           class="absolute left-3 text-xs font-bold pointer-events-none float-up"
           :class="exp.tierColorClass"
-          :style="{ bottom: '40px' }"
+          :style="{ bottom: '60px' }"
         >
           {{ ft.text }}
         </div>
       </TransitionGroup>
 
+      <!-- 标题行 -->
+      <div class="flex items-center gap-1.5 mb-1">
+        <span class="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">⚡ 经验系统</span>
+        <span class="text-[10px] text-muted-foreground/60">记录即成长</span>
+      </div>
+
       <!-- 阶级文字 + 星级 + 重生按钮 -->
-      <div class="flex items-center justify-between gap-1">
-        <div class="flex items-center gap-1 min-w-0">
+      <div class="flex items-center justify-between gap-1 mt-1.5">
+        <div class="flex items-center gap-1.5 min-w-0">
           <span class="text-xs font-medium select-none transition-colors duration-300 truncate" :class="exp.tierColorClass">
             {{ exp.displayText }}
           </span>
@@ -99,12 +105,12 @@ function isActive(path: string) {
           class="shrink-0 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
           title="重生：扣减 2000 EXP，星级 +1"
         >
-          <RotateCw class="w-3.5 h-3.5" />
+          <ArrowUpCircle class="w-4 h-4" />
         </button>
       </div>
 
       <!-- 进度条 -->
-      <div class="mt-1 h-1 w-full rounded-full bg-muted overflow-hidden">
+      <div class="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
         <div
           class="h-full rounded-full transition-all duration-300"
           :class="[
@@ -114,6 +120,11 @@ function isActive(path: string) {
           :style="{ width: exp.progress + '%' }"
         />
       </div>
+
+      <!-- 提示文字 -->
+      <p class="mt-1 text-[10px] text-muted-foreground/50 leading-tight">
+        输入 +1 EXP · 提交 +30 EXP · 每日最多10次提交奖励
+      </p>
     </div>
 
     <!-- Bottom -->

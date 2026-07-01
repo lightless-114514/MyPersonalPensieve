@@ -87,8 +87,8 @@ export const useExperienceStore = defineStore('experience', () => {
   /** 显示文本，如 "Lv.1 麻瓜 | 10 EXP" */
   const displayText = computed(() => `Lv.${tierLevel.value} ${tierName.value} | ${totalExp.value} EXP`)
 
-  /** 星级显示文本，如 "⭐ × 3"，0 星时为空 */
-  const starText = computed(() => rebirthStar.value > 0 ? `⭐ × ${rebirthStar.value}` : '')
+  /** 星级显示文本，如 "2⭐"，0 星时为空 */
+  const starText = computed(() => rebirthStar.value > 0 ? `${rebirthStar.value}⭐` : '')
 
   // ---- 监听阶级变化，触发晋升特效 ----
   let prevTierIdx = -1

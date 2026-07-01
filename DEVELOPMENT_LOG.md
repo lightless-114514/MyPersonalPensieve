@@ -1,5 +1,102 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-07-01 — 经验系统（模块一~五）
+
+### 功能概述
+
+为应用新增游戏化经验系统，用户通过输入文字和提交日记获取经验值，逐级晋升阶级，满级后可重生获得星级。支持自定义头衔、晋升特效、防抖输入计经验等机制。
+
+### 核心约定
+
+- 统一 `storageService` 封装 localStorage，键名 `app_exp_data`，所有模块通过此服务读写，不直接操作 localStorage
+- 预留 Electron 迁移注释：替换 `get()/set()` 内部实现为 `electron-store` 或 `fs` 即可
+- 存储服务写在单独文件 `services/storageService.ts`
+
+### 模块一：侧边栏占位与存储服务初始化
+
+**文件改动：**
+
+| 文件 | 改动 |
+|------|------|
+| `types/experience.ts` | 新建：ExperienceData 接口、阶级常量（阈值/名称/颜色）、存储键名、奖励常量 |
+| `services/storageService.ts` | 新建：统一存储服务，get/set/update/calcTierIndex/calcProgress 方法 |
+| `stores/experience.ts` | 新建：Pinia store，响应式状态 + load/persist/addExp/onInput/claimSubmitReward/spawnFloating |
+| `components/Sidebar.vue` | 底部新增 64px 经验系统占位区域 |
+
+**默认数据：** totalExp=10, rebirthStar=0, todaySubmissions=0, lastSubmitDate=今天, customTierNames=[], effectsEnabled=true
+
+### 模块二：输入计经验与阶级映射
+
+**阶级体系：**
+
+| 阈值 | 阶级 | 颜色 |
+|------|------|------|
+| 0 | 麻瓜 | 白（gray-400） |
+| 50 | 新生 | 绿（green-400） |
+| 200 | 级长 | 蓝（blue-400） |
+| 500 | 魁地奇队长 | 紫（purple-400） |
+| 1000 | 傲罗 | 金（yellow-400） |
+| 2000 | 梅林勋章 | 红（red-400） |
+
+**文件改动：**
+
+| 文件 | 改动 |
+|------|------|
+| `stores/experience.ts` | tierIndex/tierName/tierLevel/tierColorClass/tierBarColorClass/progress/isMaxTier/displayText 计算属性 |
+| `components/Sidebar.vue` | 阶级文字（动态颜色）+ 进度条（动态宽度+颜色） |
+| `pages/MemoriesPage.vue` | textarea `@input="exp.onInput()"` |
+| `pages/MemoryDetailPage.vue` | textarea `@input="exp.onInput()"` |
+
+### 模块三：进度条、提交奖励与飘字特效
+
+**文件改动：**
+
+| 文件 | 改动 |
+|------|------|
+| `components/Sidebar.vue` | TransitionGroup 飘字 "+X EXP" 1.5s 上浮动画；满级进度条 animate-pulse |
+| `pages/MemoriesPage.vue` | createMutation onSuccess 调用 `exp.claimSubmitReward()` |
+| `pages/MemoryDetailPage.vue` | updateMutation onSuccess 调用 `exp.claimSubmitReward()` |
+
+**规则：**
+- 提交奖励：+30 EXP，每日限 5 次，跨日重置
+- 飘字：CSS `floatUp` keyframes（opacity 1→0, translateY 0→-32px, 1.5s）
+
+### 模块四：进阶特效与自定义头衔
+
+**文件改动：**
+
+| 文件 | 改动 |
+|------|------|
+| `types/experience.ts` | 新增 `effectsEnabled: boolean`、`MAX_EXP=2000`、`INPUT_DEBOUNCE_MS=2000` |
+| `services/storageService.ts` | `getTierName()` 支持自定义名称参数，空则回退默认 |
+| `stores/experience.ts` | 防抖 `onInput()`（2秒后结算）；`watch(tierIndex)` 晋升检测触发摇晃+闪白；`toggleEffects()`；`updateCustomTierNames()`/`resetCustomTierNames()` |
+| `components/Sidebar.vue` | `.shake` CSS 动画 0.3s；全屏闪白 `<Transition name="flash">`（受 effectsEnabled 控制） |
+| `pages/SettingsPage.vue` | 新增经验系统面板：特效开关 toggle + 6个头衔输入框（placeholder 为默认名）+ 保存/重置按钮 |
+
+### 模块五：满级溢出与重生机制
+
+**文件改动：**
+
+| 文件 | 改动 |
+|------|------|
+| `services/storageService.ts` | `rebirth()` 方法：经验≥2000 时扣减 + 星级+1 |
+| `stores/experience.ts` | `doRebirth()` 动作；`canRebirth`/`starText` 计算属性 |
+| `components/Sidebar.vue` | 重生按钮 `<RotateCw>`（v-if="canRebirth"）；星级显示 `⭐ × N` |
+
+**规则：**
+- 满级（≥2000 EXP）经验不封顶，进度条恒 100% + 脉动
+- 重生：扣减 2000 EXP + 星级 +1，阶级重新映射
+- 星级 0 时不显示星级文本
+
+### 交互细节
+
+- **输入防抖**：每次 input 事件累积 0.5 EXP，停止输入 2 秒后统一结算并飘字
+- **晋升特效**：阶级提升时侧边栏摇晃 0.3s + 全屏闪白 0.2s，受特效开关控制
+- **自定义头衔**：输入框 placeholder 为默认名称，空值回退默认，保存时仅存非默认项
+- **重生按钮**：仅满级时显示，点击即扣减经验+增加星级
+
+---
+
 ## 2026-06-30 — Bug 修复：记忆列表无法加载 & 收藏筛选失效
 
 ### Bug 1：记忆列表空白，API 报错

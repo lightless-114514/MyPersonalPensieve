@@ -14,6 +14,7 @@ import {
   TIER_THRESHOLDS,
   DAILY_SUBMIT_LIMIT,
   SUBMIT_REWARD_EXP,
+  MAX_EXP,
 } from '@/types/experience'
 
 /** 获取今天的日期字符串 (YYYY-MM-DD) */
@@ -30,6 +31,7 @@ function createDefaultData(): ExperienceData {
     todaySubmissions: 0,
     lastSubmitDate: todayStr(),
     customTierNames: [] as TierName[],
+    effectsEnabled: true,
   }
 }
 
@@ -94,12 +96,13 @@ export const storageService = {
   },
 
   /**
-   * 获取当前阶级名称（优先使用自定义名称，否则用默认）
+   * 获取当前阶级名称（优先使用自定义名称，空则回退默认）
    */
-  getTierName(tierIndex: number): string {
-    const data = this.get()
-    const custom = data.customTierNames.find((t) => t.index === tierIndex)
-    if (custom && custom.name) return custom.name
+  getTierName(tierIndex: number, customNames?: TierName[]): string {
+    if (customNames) {
+      const custom = customNames.find((t) => t.index === tierIndex)
+      if (custom && custom.name.trim()) return custom.name.trim()
+    }
     return DEFAULT_TIER_NAMES[tierIndex] ?? '未知'
   },
 
@@ -109,7 +112,7 @@ export const storageService = {
    */
   calcProgress(totalExp: number): number {
     const tierIndex = this.calcTierIndex(totalExp)
-    if (tierIndex >= TIER_THRESHOLDS.length - 1) return 100 // 满级
+    if (tierIndex >= TIER_THRESHOLDS.length - 1) return 100
     const currentThreshold = TIER_THRESHOLDS[tierIndex]
     const nextThreshold = TIER_THRESHOLDS[tierIndex + 1]
     const expInTier = totalExp - currentThreshold
@@ -118,38 +121,35 @@ export const storageService = {
   },
 
   /**
-   * 增加经验值，返回更新后的数据
-   */
-  addExp(amount: number): ExperienceData {
-    const data = this.get()
-    data.totalExp = Math.round((data.totalExp + amount) * 10) / 10 // 避免浮点误差
-    this.set(data)
-    return data
-  },
-
-  /**
    * 提交奖励：成功保存日记时调用
    * 每日限 DAILY_SUBMIT_LIMIT 次，每次奖励 SUBMIT_REWARD_EXP 经验
-   * 返回 { rewarded: boolean, data: ExperienceData }
    */
   claimSubmitReward(): { rewarded: boolean; data: ExperienceData } {
     const data = this.get()
     const today = todayStr()
-
-    // 跨日重置
     if (data.lastSubmitDate !== today) {
       data.todaySubmissions = 0
       data.lastSubmitDate = today
     }
-
-    // 检查每日上限
     if (data.todaySubmissions >= DAILY_SUBMIT_LIMIT) {
       return { rewarded: false, data }
     }
-
     data.todaySubmissions += 1
     data.totalExp += SUBMIT_REWARD_EXP
     this.set(data)
     return { rewarded: true, data }
+  },
+
+  /**
+   * 重生：总经验减去 MAX_EXP，星级 +1
+   * 返回更新后的数据；如果经验不足则返回 null
+   */
+  rebirth(): ExperienceData | null {
+    const data = this.get()
+    if (data.totalExp < MAX_EXP) return null
+    data.totalExp -= MAX_EXP
+    data.rebirthStar += 1
+    this.set(data)
+    return data
   },
 }

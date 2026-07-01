@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { storageService } from '@/services/storageService'
 import {
   DEFAULT_TIER_NAMES,
@@ -7,8 +7,10 @@ import {
   TIER_BAR_COLOR_CLASSES,
   INPUT_REWARD_EXP,
   SUBMIT_REWARD_EXP,
+  INPUT_DEBOUNCE_MS,
+  MAX_EXP,
 } from '@/types/experience'
-import type { ExperienceData } from '@/types/experience'
+import type { ExperienceData, TierName } from '@/types/experience'
 
 /** 飘字项 */
 export interface FloatingText {
@@ -18,6 +20,8 @@ export interface FloatingText {
 }
 
 let floatingId = 0
+let inputDebounceTimer: ReturnType<typeof setTimeout> | null = null
+let pendingInputExp = 0
 
 export const useExperienceStore = defineStore('experience', () => {
   // ---- 核心响应式状态 ----
@@ -25,10 +29,15 @@ export const useExperienceStore = defineStore('experience', () => {
   const rebirthStar = ref(0)
   const todaySubmissions = ref(0)
   const lastSubmitDate = ref('')
-  const customTierNames = ref<{ index: number; name: string }[]>([])
+  const customTierNames = ref<TierName[]>([])
+  const effectsEnabled = ref(true)
 
   // ---- 飘字列表 ----
   const floatingTexts = ref<FloatingText[]>([])
+
+  // ---- 晋升特效状态 ----
+  const isShaking = ref(false)
+  const isFlashing = ref(false)
 
   // ---- 初始化：从 storageService 加载 ----
   function load() {
@@ -38,6 +47,7 @@ export const useExperienceStore = defineStore('experience', () => {
     todaySubmissions.value = data.todaySubmissions
     lastSubmitDate.value = data.lastSubmitDate
     customTierNames.value = data.customTierNames
+    effectsEnabled.value = data.effectsEnabled ?? true
   }
 
   // ---- 同步写入 storageService ----
@@ -48,6 +58,7 @@ export const useExperienceStore = defineStore('experience', () => {
       todaySubmissions: todaySubmissions.value,
       lastSubmitDate: lastSubmitDate.value,
       customTierNames: customTierNames.value,
+      effectsEnabled: effectsEnabled.value,
     })
   }
 
@@ -57,7 +68,7 @@ export const useExperienceStore = defineStore('experience', () => {
   const tierName = computed(() => {
     const idx = tierIndex.value
     const custom = customTierNames.value.find((t) => t.index === idx)
-    if (custom && custom.name) return custom.name
+    if (custom && custom.name.trim()) return custom.name.trim()
     return DEFAULT_TIER_NAMES[idx] ?? '未知'
   })
 
@@ -71,30 +82,58 @@ export const useExperienceStore = defineStore('experience', () => {
 
   const isMaxTier = computed(() => tierIndex.value >= DEFAULT_TIER_NAMES.length - 1)
 
+  const canRebirth = computed(() => totalExp.value >= MAX_EXP)
+
   /** 显示文本，如 "Lv.1 麻瓜 | 10 EXP" */
   const displayText = computed(() => `Lv.${tierLevel.value} ${tierName.value} | ${totalExp.value} EXP`)
 
-  // ---- 动作 ----
+  /** 星级显示文本，如 "⭐ × 3"，0 星时为空 */
+  const starText = computed(() => rebirthStar.value > 0 ? `⭐ × ${rebirthStar.value}` : '')
 
-  /** 增加经验值（输入奖励等） */
-  function addExp(amount: number) {
-    const prevTier = tierIndex.value
-    totalExp.value = Math.round((totalExp.value + amount) * 10) / 10
-    persist()
-    // 弹出飘字
-    spawnFloating(amount)
-    // 阶级变化无需额外处理，computed 自动更新
+  // ---- 监听阶级变化，触发晋升特效 ----
+  let prevTierIdx = -1
+
+  watch(tierIndex, (newIdx) => {
+    if (prevTierIdx >= 0 && newIdx > prevTierIdx && effectsEnabled.value) {
+      triggerPromotionEffect()
+    }
+    prevTierIdx = newIdx
+  })
+
+  function triggerPromotionEffect() {
+    // 摇晃 0.3 秒
+    isShaking.value = true
+    setTimeout(() => { isShaking.value = false }, 300)
+    // 全屏闪白
+    isFlashing.value = true
+    setTimeout(() => { isFlashing.value = false }, 200)
   }
 
-  /** 输入事件奖励：+0.5 EXP */
+  // ---- 动作 ----
+
+  /** 增加经验值（立即写入，用于提交奖励等非防抖场景） */
+  function addExpImmediate(amount: number) {
+    totalExp.value = Math.round((totalExp.value + amount) * 10) / 10
+    persist()
+    spawnFloating(amount)
+  }
+
+  /** 输入事件奖励：防抖 2 秒后结算 */
   function onInput() {
-    addExp(INPUT_REWARD_EXP)
+    pendingInputExp += INPUT_REWARD_EXP
+    if (inputDebounceTimer) clearTimeout(inputDebounceTimer)
+    inputDebounceTimer = setTimeout(() => {
+      if (pendingInputExp > 0) {
+        addExpImmediate(pendingInputExp)
+        pendingInputExp = 0
+      }
+      inputDebounceTimer = null
+    }, INPUT_DEBOUNCE_MS)
   }
 
   /** 提交奖励：+30 EXP，每日限 5 次 */
   function claimSubmitReward(): boolean {
     const today = new Date().toISOString().slice(0, 10)
-    // 跨日重置
     if (lastSubmitDate.value !== today) {
       todaySubmissions.value = 0
       lastSubmitDate.value = today
@@ -103,10 +142,35 @@ export const useExperienceStore = defineStore('experience', () => {
       return false
     }
     todaySubmissions.value += 1
-    totalExp.value += SUBMIT_REWARD_EXP
-    persist()
-    spawnFloating(SUBMIT_REWARD_EXP)
+    addExpImmediate(SUBMIT_REWARD_EXP)
     return true
+  }
+
+  /** 重生：经验 ≥ 2000 时扣减 2000，星级 +1 */
+  function doRebirth(): boolean {
+    if (totalExp.value < MAX_EXP) return false
+    totalExp.value -= MAX_EXP
+    rebirthStar.value += 1
+    persist()
+    return true
+  }
+
+  /** 更新自定义阶级名称 */
+  function updateCustomTierNames(names: TierName[]) {
+    customTierNames.value = names
+    persist()
+  }
+
+  /** 重置自定义名称为默认（清空自定义数组） */
+  function resetCustomTierNames() {
+    customTierNames.value = []
+    persist()
+  }
+
+  /** 切换特效开关 */
+  function toggleEffects() {
+    effectsEnabled.value = !effectsEnabled.value
+    persist()
   }
 
   /** 弹出飘字 */
@@ -117,7 +181,6 @@ export const useExperienceStore = defineStore('experience', () => {
       text: `+${amount} EXP`,
       amount,
     })
-    // 1.5 秒后移除
     setTimeout(() => {
       floatingTexts.value = floatingTexts.value.filter((f) => f.id !== id)
     }, 1500)
@@ -130,7 +193,10 @@ export const useExperienceStore = defineStore('experience', () => {
     todaySubmissions,
     lastSubmitDate,
     customTierNames,
+    effectsEnabled,
     floatingTexts,
+    isShaking,
+    isFlashing,
     // 计算属性
     tierIndex,
     tierName,
@@ -139,12 +205,18 @@ export const useExperienceStore = defineStore('experience', () => {
     tierBarColorClass,
     progress,
     isMaxTier,
+    canRebirth,
     displayText,
+    starText,
     // 动作
     load,
-    addExp,
+    addExpImmediate,
     onInput,
     claimSubmitReward,
+    doRebirth,
+    updateCustomTierNames,
+    resetCustomTierNames,
+    toggleEffects,
     spawnFloating,
   }
 })

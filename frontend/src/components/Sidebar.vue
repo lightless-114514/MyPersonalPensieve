@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   Plus,
+  RotateCw,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -65,7 +66,12 @@ function isActive(path: string) {
     </nav>
 
     <!-- 经验系统 -->
-    <div class="px-3 py-2 border-t border-border relative">
+    <div class="px-3 py-2 border-t border-border relative" :class="{ shake: exp.isShaking }">
+      <!-- 全屏闪白 -->
+      <Transition name="flash">
+        <div v-if="exp.isFlashing" class="fixed inset-0 bg-white/80 z-[9999] pointer-events-none" />
+      </Transition>
+
       <!-- 飘字特效 -->
       <TransitionGroup name="float">
         <div
@@ -79,11 +85,22 @@ function isActive(path: string) {
         </div>
       </TransitionGroup>
 
-      <!-- 阶级文字 -->
-      <div class="flex items-center gap-1">
-        <span class="text-xs font-medium select-none transition-colors duration-300" :class="exp.tierColorClass">
-          {{ exp.displayText }}
-        </span>
+      <!-- 阶级文字 + 星级 + 重生按钮 -->
+      <div class="flex items-center justify-between gap-1">
+        <div class="flex items-center gap-1 min-w-0">
+          <span class="text-xs font-medium select-none transition-colors duration-300 truncate" :class="exp.tierColorClass">
+            {{ exp.displayText }}
+          </span>
+          <span v-if="exp.starText" class="text-xs shrink-0">{{ exp.starText }}</span>
+        </div>
+        <button
+          v-if="exp.canRebirth"
+          @click="exp.doRebirth()"
+          class="shrink-0 p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-accent transition-colors"
+          title="重生：扣减 2000 EXP，星级 +1"
+        >
+          <RotateCw class="w-3.5 h-3.5" />
+        </button>
       </div>
 
       <!-- 进度条 -->
@@ -138,5 +155,32 @@ function isActive(path: string) {
     opacity: 0;
     transform: translateY(-32px);
   }
+}
+
+/* 晋升摇晃动画 0.3s */
+.shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+/* 闪白动画 */
+.flash-enter-active {
+  animation: flashIn 0.2s ease-out;
+}
+.flash-leave-active {
+  animation: none;
+}
+
+@keyframes flashIn {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 </style>

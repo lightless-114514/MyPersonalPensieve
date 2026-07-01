@@ -15,6 +15,9 @@ export const DEFAULT_TIER_NAMES = [
 /** 阶级阈值：经验值达到对应值即升入该阶级 */
 export const TIER_THRESHOLDS = [0, 50, 200, 500, 1000, 2000] as const
 
+/** 满级所需经验 */
+export const MAX_EXP = 2000
+
 /** 阶级颜色 CSS 类名（按阶级索引 0~5） */
 export const TIER_COLOR_CLASSES = [
   'text-gray-400',    // 白（灰白）
@@ -53,6 +56,8 @@ export interface ExperienceData {
   lastSubmitDate: string
   /** 六个阶级的自定义名称，空数组表示使用默认 */
   customTierNames: TierName[]
+  /** 全局特效开关 */
+  effectsEnabled: boolean
 }
 
 /** localStorage 存储键名 */
@@ -66,3 +71,6 @@ export const SUBMIT_REWARD_EXP = 30
 
 /** 每次有效输入奖励经验 */
 export const INPUT_REWARD_EXP = 0.5
+
+/** 输入防抖延迟（毫秒） */
+export const INPUT_DEBOUNCE_MS = 2000

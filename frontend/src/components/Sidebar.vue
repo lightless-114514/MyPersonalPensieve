@@ -1,8 +1,8 @@
 ﻿<script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
-import { storageService } from '@/services/storageService'
-import { ref, onMounted } from 'vue'
+import { useExperienceStore } from '@/stores/experience'
+import { onMounted } from 'vue'
 import {
   Brain,
   Search,
@@ -16,20 +16,10 @@ import {
 
 const route = useRoute()
 const settings = useSettingsStore()
-
-// 经验系统数据
-const expDisplay = ref('Lv.1 麻瓜 | 0 EXP')
-
-function loadExpDisplay() {
-  const data = storageService.get()
-  const tierIndex = storageService.calcTierIndex(data.totalExp)
-  const tierName = storageService.getTierName(tierIndex)
-  const level = tierIndex + 1
-  expDisplay.value = `Lv.${level} ${tierName} | ${data.totalExp} EXP`
-}
+const exp = useExperienceStore()
 
 onMounted(() => {
-  loadExpDisplay()
+  exp.load()
 })
 
 const navItems = [
@@ -74,11 +64,39 @@ function isActive(path: string) {
       </router-link>
     </nav>
 
-    <!-- 经验系统占位 -->
-    <div class="h-16 px-3 flex items-center border-t border-border">
-      <span class="text-xs text-gray-400 dark:text-gray-500 select-none">
-        {{ expDisplay }}
-      </span>
+    <!-- 经验系统 -->
+    <div class="px-3 py-2 border-t border-border relative">
+      <!-- 飘字特效 -->
+      <TransitionGroup name="float">
+        <div
+          v-for="ft in exp.floatingTexts"
+          :key="ft.id"
+          class="absolute left-3 text-xs font-bold pointer-events-none float-up"
+          :class="exp.tierColorClass"
+          :style="{ bottom: '40px' }"
+        >
+          {{ ft.text }}
+        </div>
+      </TransitionGroup>
+
+      <!-- 阶级文字 -->
+      <div class="flex items-center gap-1">
+        <span class="text-xs font-medium select-none transition-colors duration-300" :class="exp.tierColorClass">
+          {{ exp.displayText }}
+        </span>
+      </div>
+
+      <!-- 进度条 -->
+      <div class="mt-1 h-1 w-full rounded-full bg-muted overflow-hidden">
+        <div
+          class="h-full rounded-full transition-all duration-300"
+          :class="[
+            exp.tierBarColorClass,
+            exp.isMaxTier ? 'animate-pulse' : ''
+          ]"
+          :style="{ width: exp.progress + '%' }"
+        />
+      </div>
     </div>
 
     <!-- Bottom -->
@@ -101,3 +119,24 @@ function isActive(path: string) {
     </div>
   </aside>
 </template>
+
+<style scoped>
+/* 飘字入场动画 */
+.float-enter-active {
+  animation: floatUp 1.5s ease-out forwards;
+}
+.float-leave-active {
+  animation: none;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-32px);
+  }
+}
+</style>

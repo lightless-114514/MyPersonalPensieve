@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getMemories, createMemory, getTags, toggleFavoriteMemory } from '@/api'
 import { formatDate, typeIcon, sentimentColor, BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
+import { useExperienceStore } from '@/stores/experience'
 import { Search, Plus, X, Loader2, Tag, Star } from 'lucide-vue-next'
 
 const route = useRoute()
 const queryClient = useQueryClient()
+const exp = useExperienceStore()
 
 const page = ref(0)
 const showFavoritesOnly = ref(false)
@@ -131,6 +133,7 @@ const createMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['memories'] })
     queryClient.invalidateQueries({ queryKey: ['recent-memories'] })
     queryClient.invalidateQueries({ queryKey: ['tags'] })
+    exp.claimSubmitReward()
     showCreate.value = false
     isUploading.value = false
     resetForm()
@@ -220,6 +223,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
           placeholder="写下你的记忆…"
           rows="6"
           class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+          @input="exp.onInput()"
         ></textarea>
 
         <!-- Tag selector -->

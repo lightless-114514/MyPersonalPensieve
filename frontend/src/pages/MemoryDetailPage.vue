@@ -1,15 +1,17 @@
-﻿﻿<script setup lang="ts">
+﻿﻿﻿﻿﻿﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getMemory, deleteMemory, updateMemory, toggleFavoriteMemory } from '@/api'
 import { formatDate, typeIcon, sentimentColor, sentimentBg, bigTagClass, bigTagLabel, BIG_TAG_OPTIONS } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
+import { useExperienceStore } from '@/stores/experience'
 import { ArrowLeft, Trash2, ExternalLink, Edit3, Save, X, Star } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const queryClient = useQueryClient()
+const exp = useExperienceStore()
 
 const isEditing = ref(false)
 const editForm = ref({ title: '', content: '', sourceUrl: '', bigTag: '' as BigTagCategory | '', tags: [] as string[] })
@@ -80,6 +82,7 @@ const updateMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['memories'] })
     queryClient.invalidateQueries({ queryKey: ['recent-memories'] })
     queryClient.invalidateQueries({ queryKey: ['tags'] })
+    exp.claimSubmitReward()
     isEditing.value = false
   },
 })
@@ -219,6 +222,7 @@ function toggleFavorite() {
               v-model="editForm.content"
               rows="10"
               class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+              @input="exp.onInput()"
             ></textarea>
           </div>
 

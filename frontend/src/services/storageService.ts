@@ -8,7 +8,13 @@
  */
 
 import type { ExperienceData, TierName } from '@/types/experience'
-import { EXP_STORAGE_KEY, DEFAULT_TIER_NAMES } from '@/types/experience'
+import {
+  EXP_STORAGE_KEY,
+  DEFAULT_TIER_NAMES,
+  TIER_THRESHOLDS,
+  DAILY_SUBMIT_LIMIT,
+  SUBMIT_REWARD_EXP,
+} from '@/types/experience'
 
 /** 获取今天的日期字符串 (YYYY-MM-DD) */
 function todayStr(): string {
@@ -42,13 +48,11 @@ export const storageService = {
     try {
       const raw = localStorage.getItem(EXP_STORAGE_KEY)
       if (!raw) {
-        // 首次访问，写入默认值
         const defaults = createDefaultData()
         this.set(defaults)
         return defaults
       }
       const parsed = JSON.parse(raw) as Partial<ExperienceData>
-      // 合并默认值，防止字段缺失
       return {
         ...createDefaultData(),
         ...parsed,
@@ -79,6 +83,17 @@ export const storageService = {
   },
 
   /**
+   * 根据总经验值计算当前阶级索引 (0-based)
+   * 阈值: 0 → 0, 50 → 1, 200 → 2, 500 → 3, 1000 → 4, 2000 → 5
+   */
+  calcTierIndex(totalExp: number): number {
+    for (let i = TIER_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (totalExp >= TIER_THRESHOLDS[i]) return i
+    }
+    return 0
+  },
+
+  /**
    * 获取当前阶级名称（优先使用自定义名称，否则用默认）
    */
   getTierName(tierIndex: number): string {
@@ -89,15 +104,52 @@ export const storageService = {
   },
 
   /**
-   * 根据总经验值计算当前阶级索引 (0-based)
-   * 阶级划分: 0-99 → 0, 100-299 → 1, 300-599 → 2, 600-999 → 3, 1000-1499 → 4, 1500+ → 5
+   * 计算当前阶级内的进度百分比 (0~100)
+   * 满级 (index=5) 时恒为 100
    */
-  calcTierIndex(totalExp: number): number {
-    if (totalExp < 100) return 0
-    if (totalExp < 300) return 1
-    if (totalExp < 600) return 2
-    if (totalExp < 1000) return 3
-    if (totalExp < 1500) return 4
-    return 5
+  calcProgress(totalExp: number): number {
+    const tierIndex = this.calcTierIndex(totalExp)
+    if (tierIndex >= TIER_THRESHOLDS.length - 1) return 100 // 满级
+    const currentThreshold = TIER_THRESHOLDS[tierIndex]
+    const nextThreshold = TIER_THRESHOLDS[tierIndex + 1]
+    const expInTier = totalExp - currentThreshold
+    const expNeeded = nextThreshold - currentThreshold
+    return Math.min(100, Math.round((expInTier / expNeeded) * 100))
+  },
+
+  /**
+   * 增加经验值，返回更新后的数据
+   */
+  addExp(amount: number): ExperienceData {
+    const data = this.get()
+    data.totalExp = Math.round((data.totalExp + amount) * 10) / 10 // 避免浮点误差
+    this.set(data)
+    return data
+  },
+
+  /**
+   * 提交奖励：成功保存日记时调用
+   * 每日限 DAILY_SUBMIT_LIMIT 次，每次奖励 SUBMIT_REWARD_EXP 经验
+   * 返回 { rewarded: boolean, data: ExperienceData }
+   */
+  claimSubmitReward(): { rewarded: boolean; data: ExperienceData } {
+    const data = this.get()
+    const today = todayStr()
+
+    // 跨日重置
+    if (data.lastSubmitDate !== today) {
+      data.todaySubmissions = 0
+      data.lastSubmitDate = today
+    }
+
+    // 检查每日上限
+    if (data.todaySubmissions >= DAILY_SUBMIT_LIMIT) {
+      return { rewarded: false, data }
+    }
+
+    data.todaySubmissions += 1
+    data.totalExp += SUBMIT_REWARD_EXP
+    this.set(data)
+    return { rewarded: true, data }
   },
 }

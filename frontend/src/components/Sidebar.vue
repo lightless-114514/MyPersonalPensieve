@@ -1,6 +1,8 @@
 ﻿<script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
+import { storageService } from '@/services/storageService'
+import { ref, onMounted } from 'vue'
 import {
   Brain,
   Search,
@@ -14,6 +16,21 @@ import {
 
 const route = useRoute()
 const settings = useSettingsStore()
+
+// 经验系统数据
+const expDisplay = ref('Lv.1 麻瓜 | 0 EXP')
+
+function loadExpDisplay() {
+  const data = storageService.get()
+  const tierIndex = storageService.calcTierIndex(data.totalExp)
+  const tierName = storageService.getTierName(tierIndex)
+  const level = tierIndex + 1
+  expDisplay.value = `Lv.${level} ${tierName} | ${data.totalExp} EXP`
+}
+
+onMounted(() => {
+  loadExpDisplay()
+})
 
 const navItems = [
   { to: '/', label: '首页', icon: Brain },
@@ -56,6 +73,13 @@ function isActive(path: string) {
         {{ item.label }}
       </router-link>
     </nav>
+
+    <!-- 经验系统占位 -->
+    <div class="h-16 px-3 flex items-center border-t border-border">
+      <span class="text-xs text-gray-400 dark:text-gray-500 select-none">
+        {{ expDisplay }}
+      </span>
+    </div>
 
     <!-- Bottom -->
     <div class="p-3 border-t border-border space-y-2">

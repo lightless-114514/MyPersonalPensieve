@@ -4,44 +4,52 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --primary: 262.1 83.3% 57.8%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 262.1 83.3% 57.8%;
-    --radius: 0.75rem;
+    --background: 40 20% 98%;
+    --foreground: 30 10% 12%;
+    --card: 40 20% 99%;
+    --card-foreground: 30 10% 12%;
+    --primary: 28 75% 48%;
+    --primary-foreground: 40 20% 98%;
+    --secondary: 30 15% 93%;
+    --secondary-foreground: 30 10% 12%;
+    --muted: 30 12% 93%;
+    --muted-foreground: 30 5% 45%;
+    --accent: 28 60% 92%;
+    --accent-foreground: 28 75% 30%;
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 40 20% 98%;
+    --border: 30 12% 88%;
+    --input: 30 12% 88%;
+    --ring: 28 75% 48%;
+    --radius: 0.625rem;
+    --sidebar-bg: 30 18% 96%;
+    --sidebar-border: 30 12% 88%;
+    --card-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --card-shadow-hover: 0 2px 8px -2px rgb(0 0 0 / 0.06), 0 1px 2px -2px rgb(0 0 0 / 0.03);
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --primary: 263.4 70% 50.4%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 263.4 70% 50.4%;
+    --background: 30 15% 6%;
+    --foreground: 40 15% 92%;
+    --card: 30 12% 9%;
+    --card-foreground: 40 15% 92%;
+    --primary: 28 70% 58%;
+    --primary-foreground: 30 15% 6%;
+    --secondary: 30 10% 15%;
+    --secondary-foreground: 40 15% 92%;
+    --muted: 30 10% 15%;
+    --muted-foreground: 30 5% 55%;
+    --accent: 28 40% 18%;
+    --accent-foreground: 28 70% 65%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 40 15% 92%;
+    --border: 30 10% 18%;
+    --input: 30 10% 18%;
+    --ring: 28 70% 58%;
+    --sidebar-bg: 30 12% 8%;
+    --sidebar-border: 30 10% 18%;
+    --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.12);
+    --card-shadow-hover: 0 4px 12px -2px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.15);
   }
 }
 
@@ -51,20 +59,76 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Display font for headings — serif for character, anti-slop */
+  h1, h2, h3, .font-display {
+    font-family: Georgia, 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  /* Electron 窗口拖拽区域 */
+  .electron-drag {
+    -webkit-app-region: drag;
+  }
+  .electron-no-drag {
+    -webkit-app-region: no-drag;
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Electron/Chromium optimized */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
+  background: hsl(var(--muted-foreground) / 0.2);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.4);
+}
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+}
+
+/* Smooth transitions for theme switching */
+html {
+  transition: color-scheme 0.3s ease;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+/* Selection color */
+::selection {
+  background: hsl(var(--primary) / 0.2);
+  color: hsl(var(--foreground));
+}
+
+/* Focus visible ring */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Advanced typography — huashu-design anti-slop signature */
+p, li, blockquote {
+  text-wrap: pretty;
+  hanging-punctuation: first;
+}
+
+/* Electron text selection disable for non-input areas (optional) */
+@media (display-mode: windowed) {
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
 }

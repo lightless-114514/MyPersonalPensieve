@@ -148,7 +148,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 700,
     title: 'Pensieve',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#faf8f5',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

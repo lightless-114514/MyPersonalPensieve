@@ -1,5 +1,96 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-07-02 — huashu-design 美化：反AI slop系统性重构
+
+### 设计哲学
+
+依据 `.agents/skills/huashu-design/SKILL.md` 的反AI slop原则和品位锚点，对全站进行系统性美化重构。核心原则：一个有温度的底色 + 单个accent贯穿全场 + serif display字体 + 减法设计。
+
+### 反slop六条禁令检查与修复
+
+| 禁令 | 原状态 | 修复 |
+|------|--------|------|
+| 禁紫色渐变 | 紫色主色(HSL 262° 83% 58%) | → 暖铜色(HSL 28° 75% 48%) |
+| 禁emoji作图标 | 6处emoji(📝🖼️😊😔😐⚡✓) | → lucide-vue-next组件 |
+| 禁圆角卡片+左border accent | 无此模式 | ✅ 保持 |
+| 禁SVG画人/物 | 无 | ✅ 保持 |
+| 禁CSS剪影代产品图 | 无 | ✅ 保持 |
+| 禁Inter/Roboto作display字体 | 系统默认sans-serif | → Georgia/Noto Serif SC serif |
+
+### 色彩体系重构
+
+全套HSL变量从紫色调转为暖铜色调：
+
+| 变量 | 亮色模式 | 暗色模式 |
+|------|----------|----------|
+| --primary | 28 75% 48% | 28 70% 58% |
+| --background | 40 20% 98% | 30 15% 6% |
+| --accent | 28 60% 92% | 28 40% 18% |
+| --border | 30 12% 88% | 30 10% 18% |
+| --radius | 0.625rem | — |
+| --card-shadow | 减淡(0.03透明度) | 减淡(0.2透明度) |
+
+### 字体体系升级
+
+- **Display字体**：Georgia, Noto Serif SC, Songti SC, serif — 用于所有h1/h2/h3
+- **Body字体**：-apple-system, BlinkMacSystemFont, Segoe UI, Noto Sans SC, sans-serif
+- **排版优化**：text-wrap:pretty、hanging-punctuation:first
+
+### emoji→lucide图标替换
+
+| 页面/组件 | 原emoji | 替换为 |
+|-----------|---------|--------|
+| utils.ts typeIcon | 📝🖼️ | FileText/ImageIcon/File |
+| utils.ts BIG_TAG_CONFIG | 📖✏️💡⚖️ | BookOpen/PenLine/Lightbulb/Scale |
+| HomePage | ✨(空状态) | 移除 |
+| MemoriesPage | 📝🖼️😊😔😐 | lucide组件+文字标签 |
+| MemoryDetailPage | 📖✏️💡⚖️ | component:is动态组件 |
+| GraphPage | 🔀🕸️ | GitBranch/Network |
+| AnalyticsPage | 📖✏️💡⚖️ | component:is动态组件 |
+| SettingsPage | ✓ | Check图标 |
+| Sidebar | ⚡ | Zap图标 |
+
+### 设计签名时刻
+
+- **HomePage hero区域**：Brain图标呼吸动画(animate-breathe) + 暖铜色accent装饰线(w-12 h-0.5 bg-primary/40)
+- **所有h1**：font-display serif字体，tracking-tight
+- **所有h2**(SettingsPage)：font-display serif字体
+
+### 交互优化
+
+- **AppLayout**：fade→page过渡动画，进入时translateY(4px)微动
+- **tailwind.config.js**：动画easing改为cubic-bezier(0.22,1,0.36,1)
+- **SettingsPage**：section卡片shadow-card + rounded-xl
+- **AnalyticsPage**：图表卡片shadow-card + rounded-xl
+- **GraphPage**：h1添加font-display
+
+### Electron打包优化
+
+- **main.js backgroundColor**：#0f172a(暗色硬编码) → #faf8f5(匹配亮色主题)
+- **global.css**：Chromium滚动条优化(6px宽/透明轨道)
+- **global.css**：electron-drag/electron-no-drag区域定义
+- **global.css**：display-mode:windowed下no-select
+
+### 文件改动
+
+| 文件 | 改动类型 |
+|------|----------|
+| `frontend/src/styles/global.css` | 色彩体系+字体+排版+Electron优化 |
+| `frontend/tailwind.config.js` | 字体配置+动画easing+breathe动画 |
+| `frontend/src/lib/utils.ts` | emoji→lucide Component重构 |
+| `frontend/src/pages/HomePage.vue` | hero签名时刻+typeIcon组件化 |
+| `frontend/src/pages/MemoriesPage.vue` | emoji→lucide+font-display |
+| `frontend/src/pages/MemoryDetailPage.vue` | typeIcon/opt.icon组件化+font-display |
+| `frontend/src/pages/GraphPage.vue` | emoji→lucide+font-display |
+| `frontend/src/pages/AnalyticsPage.vue` | opt.icon组件化+font-display+shadow-card |
+| `frontend/src/pages/SettingsPage.vue` | font-display+shadow-card+rounded-xl+Check图标 |
+| `frontend/src/components/Sidebar.vue` | ⚡→Zap图标 |
+| `frontend/src/components/AppLayout.vue` | fade→page过渡动画 |
+| `frontend/src/types/experience.ts` | 经验参数调优 |
+| `electron/main.js` | backgroundColor匹配主题 |
+
+---
+
 ## 2026-07-01 — 经验系统优化：加速升级 & UI 提示增强
 
 ### 功能概述

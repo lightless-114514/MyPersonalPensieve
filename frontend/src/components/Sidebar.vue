@@ -13,6 +13,7 @@ import {
   Moon,
   Plus,
   ArrowUpCircle,
+  Zap,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -38,12 +39,14 @@ function isActive(path: string) {
 </script>
 
 <template>
-  <aside class="w-64 border-r border-border bg-card flex flex-col shrink-0">
-    <!-- Logo -->
-    <div class="p-4 border-b border-border">
-      <div class="flex items-center gap-2">
-        <Brain class="w-6 h-6 text-primary" />
-        <span class="font-semibold text-sm">Pensieve</span>
+  <aside class="w-64 border-r border-sidebar-border bg-sidebar flex flex-col shrink-0 no-select">
+    <!-- Logo - Electron drag region -->
+    <div class="p-4 border-b border-sidebar-border electron-drag">
+      <div class="flex items-center gap-2.5 electron-no-drag">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Brain class="w-5 h-5 text-primary" />
+        </div>
+        <span class="font-bold text-base tracking-tight">Pensieve</span>
       </div>
     </div>
 
@@ -54,19 +57,19 @@ function isActive(path: string) {
         :key="item.to"
         :to="item.to"
         :class="[
-          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+          'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200',
           isActive(item.to)
-            ? 'bg-primary/10 text-primary font-medium'
-            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+            ? 'bg-primary/10 text-primary font-medium shadow-sm'
+            : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
         ]"
       >
-        <component :is="item.icon" class="w-4 h-4" />
+        <component :is="item.icon" class="w-[18px] h-[18px]" :class="isActive(item.to) ? 'text-primary' : ''" />
         {{ item.label }}
       </router-link>
     </nav>
 
     <!-- 经验系统 -->
-    <div class="px-3 py-3 border-t border-border relative" :class="{ shake: exp.isShaking }">
+    <div class="px-3 py-3 border-t border-sidebar-border relative" :class="{ shake: exp.isShaking }">
       <!-- 全屏闪白 -->
       <Transition name="flash">
         <div v-if="exp.isFlashing" class="fixed inset-0 bg-white/80 z-[9999] pointer-events-none" />
@@ -86,9 +89,9 @@ function isActive(path: string) {
       </TransitionGroup>
 
       <!-- 标题行 -->
-      <div class="flex items-center gap-1.5 mb-1">
-        <span class="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">⚡ 经验系统</span>
-        <span class="text-[10px] text-muted-foreground/60">记录即成长</span>
+      <div class="flex items-center gap-1.5 mb-1.5">
+        <span class="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase inline-flex items-center gap-1"><Zap class="w-3 h-3" />经验系统</span>
+        <span class="text-[10px] text-muted-foreground/50">记录即成长</span>
       </div>
 
       <!-- 阶级文字 + 星级 + 重生按钮 -->
@@ -110,9 +113,9 @@ function isActive(path: string) {
       </div>
 
       <!-- 进度条 -->
-      <div class="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+      <div class="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
         <div
-          class="h-full rounded-full transition-all duration-300"
+          class="h-full rounded-full transition-all duration-500 ease-out"
           :class="[
             exp.tierBarColorClass,
             exp.isMaxTier ? 'animate-pulse' : ''
@@ -122,23 +125,23 @@ function isActive(path: string) {
       </div>
 
       <!-- 提示文字 -->
-      <p class="mt-1 text-[10px] text-muted-foreground/50 leading-tight">
+      <p class="mt-1 text-[10px] text-muted-foreground/40 leading-tight">
         输入 +1 EXP · 提交 +30 EXP · 每日最多10次提交奖励
       </p>
     </div>
 
     <!-- Bottom -->
-    <div class="p-3 border-t border-border space-y-2">
+    <div class="p-3 border-t border-sidebar-border space-y-2">
       <router-link
         to="/memories?new=true"
-        class="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="flex items-center justify-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
       >
         <Plus class="w-4 h-4" />
         新建记忆
       </router-link>
       <button
         @click="settings.toggleDarkMode()"
-        class="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        class="flex items-center gap-2 px-3 py-2 w-full rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-all duration-200"
       >
         <Sun v-if="settings.darkMode" class="w-4 h-4" />
         <Moon v-else class="w-4 h-4" />

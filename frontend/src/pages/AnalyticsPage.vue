@@ -116,7 +116,7 @@ watch(trends, () => setTimeout(renderChart, 100))
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">情感趋势</h1>
+      <h1 class="text-2xl font-bold tracking-tight font-display">情感趋势</h1>
       <select
         v-model="days"
         class="px-3 py-1.5 rounded-md border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -152,12 +152,12 @@ watch(trends, () => setTimeout(renderChart, 100))
             : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
         ]"
       >
-        <span>{{ opt.icon }}</span>
+        <component :is="opt.icon" class="w-3.5 h-3.5" />
         <span>{{ opt.label }}</span>
       </button>
     </div>
 
-    <div ref="container" class="w-full rounded-lg border border-border bg-card p-4">
+    <div ref="container" class="w-full rounded-xl border border-border bg-card p-4 shadow-card">
       <div
         v-if="!trends?.length"
         class="flex items-center justify-center h-[400px] text-muted-foreground"

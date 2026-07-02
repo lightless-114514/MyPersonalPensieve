@@ -64,13 +64,13 @@ export interface ExperienceData {
 export const EXP_STORAGE_KEY = 'app_exp_data'
 
 /** 每日提交奖励上限 */
-export const DAILY_SUBMIT_LIMIT = 5
+export const DAILY_SUBMIT_LIMIT = 10
 
 /** 每次提交奖励经验 */
 export const SUBMIT_REWARD_EXP = 30
 
 /** 每次有效输入奖励经验 */
-export const INPUT_REWARD_EXP = 0.5
+export const INPUT_REWARD_EXP = 1
 
 /** 输入防抖延迟（毫秒） */
-export const INPUT_DEBOUNCE_MS = 2000
+export const INPUT_DEBOUNCE_MS = 800

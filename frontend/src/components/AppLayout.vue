@@ -12,7 +12,7 @@ const settings = useSettingsStore()
     <Sidebar />
     <main class="flex-1 overflow-y-auto p-6">
       <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
+        <transition name="page" mode="out-in">
           <component :is="Component" />
         </transition>
       </router-view>
@@ -21,12 +21,17 @@ const settings = useSettingsStore()
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
+.page-enter-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.page-leave-active {
   transition: opacity 0.15s ease;
 }
-.fade-enter-from,
-.fade-leave-to {
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.page-leave-to {
   opacity: 0;
 }
 </style>

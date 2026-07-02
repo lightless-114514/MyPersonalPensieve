@@ -5,6 +5,7 @@ import { getKnowledgeGraph } from '@/api'
 import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
 import * as d3 from 'd3'
+import { GitBranch, Network } from 'lucide-vue-next'
 
 const container = ref<HTMLDivElement>()
 const layoutMode = ref<'force' | 'tree'>('force')
@@ -356,14 +357,16 @@ watch(layoutMode, () => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4 animate-fade-in">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">知识图谱</h1>
+      <h1 class="text-2xl font-bold tracking-tight font-display">知识图谱</h1>
       <button
         @click="toggleLayout"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
       >
-        {{ layoutMode === 'force' ? '🔀 切换思维导图' : '🕸️ 切换力导向图' }}
+        {{ layoutMode === 'force' ? '切换思维导图' : '切换力导向图' }}
+        <GitBranch v-if="layoutMode === 'force'" class="w-4 h-4" />
+        <Network v-else class="w-4 h-4" />
       </button>
     </div>
 
@@ -373,9 +376,9 @@ watch(layoutMode, () => {
       <button
         @click="setFilter('')"
         :class="[
-          'px-3 py-1 rounded-full text-xs font-medium border transition-all',
+          'px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
           !filterBigTag
-            ? 'bg-primary text-primary-foreground border-primary'
+            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
             : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
         ]"
       >
@@ -386,20 +389,20 @@ watch(layoutMode, () => {
         :key="opt.value"
         @click="setFilter(opt.value)"
         :class="[
-          'inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border transition-all',
+          'inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200',
           filterBigTag === opt.value
             ? bigTagClass(opt.value) + ' shadow-sm'
             : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
         ]"
       >
-        <span>{{ opt.icon }}</span>
+        <component :is="opt.icon" class="w-3.5 h-3.5" />
         <span>{{ opt.label }}</span>
       </button>
     </div>
 
     <div
       ref="container"
-      class="w-full h-[calc(100vh-14rem)] rounded-lg border border-border bg-card relative"
+      class="w-full h-[calc(100vh-14rem)] rounded-xl border border-border bg-card relative shadow-card overflow-hidden"
     >
       <div
         v-if="!graph?.nodes?.length"
@@ -409,7 +412,7 @@ watch(layoutMode, () => {
       </div>
       <div
         v-if="tooltip.visible"
-        class="absolute z-50 px-3 py-1.5 text-xs bg-popover text-popover-foreground rounded-md border border-border shadow-lg pointer-events-none max-w-xs"
+        class="absolute z-50 px-3 py-1.5 text-xs bg-popover text-popover-foreground rounded-lg border border-border shadow-lg pointer-events-none max-w-xs"
         :style="{ left: tooltip.x + 'px', top: tooltip.y + 'px' }"
       >
         {{ tooltip.text }}

@@ -2,7 +2,7 @@
 import { useSettingsStore } from '@/stores/settings'
 import { useExperienceStore } from '@/stores/experience'
 import { ref, computed, onMounted } from 'vue'
-import { Save, RotateCcw } from 'lucide-vue-next'
+import { Save, RotateCcw, Check } from 'lucide-vue-next'
 import { DEFAULT_TIER_NAMES } from '@/types/experience'
 import type { TierName } from '@/types/experience'
 
@@ -52,12 +52,12 @@ function saveSettings() {
 
 <template>
   <div class="max-w-2xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold">设置</h1>
+    <h1 class="text-2xl font-bold tracking-tight font-display">设置</h1>
 
     <div class="space-y-6">
       <!-- Appearance -->
-      <section class="p-6 rounded-lg border border-border bg-card space-y-4">
-        <h2 class="font-semibold">外观</h2>
+      <section class="p-6 rounded-xl border border-border bg-card space-y-4 shadow-card">
+        <h2 class="font-semibold font-display">外观</h2>
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium">暗色模式</p>
@@ -81,8 +81,8 @@ function saveSettings() {
       </section>
 
       <!-- API -->
-      <section class="p-6 rounded-lg border border-border bg-card space-y-4">
-        <h2 class="font-semibold">OpenAI API</h2>
+      <section class="p-6 rounded-xl border border-border bg-card space-y-4 shadow-card">
+        <h2 class="font-semibold font-display">OpenAI API</h2>
         <p class="text-xs text-muted-foreground">
           用于 AI 记忆提取、情感分析和智能问答
         </p>
@@ -95,8 +95,8 @@ function saveSettings() {
       </section>
 
       <!-- Language -->
-      <section class="p-6 rounded-lg border border-border bg-card space-y-4">
-        <h2 class="font-semibold">语言</h2>
+      <section class="p-6 rounded-xl border border-border bg-card space-y-4 shadow-card">
+        <h2 class="font-semibold font-display">语言</h2>
         <select
           v-model="settings.language"
           class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -107,8 +107,8 @@ function saveSettings() {
       </section>
 
       <!-- 经验系统 -->
-      <section class="p-6 rounded-lg border border-border bg-card space-y-4">
-        <h2 class="font-semibold">经验系统</h2>
+      <section class="p-6 rounded-xl border border-border bg-card space-y-4 shadow-card">
+        <h2 class="font-semibold font-display">经验系统</h2>
 
         <!-- 特效开关 -->
         <div class="flex items-center justify-between">
@@ -170,8 +170,9 @@ function saveSettings() {
         @click="saveSettings"
         class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
       >
-        <Save class="w-4 h-4" />
-        {{ saved ? '已保存 ✓' : '保存设置' }}
+        <Save v-if="!saved" class="w-4 h-4" />
+        <Check v-else class="w-4 h-4" />
+        {{ saved ? '已保存' : '保存设置' }}
       </button>
     </div>
   </div>

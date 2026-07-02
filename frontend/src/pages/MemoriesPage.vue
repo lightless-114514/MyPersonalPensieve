@@ -133,7 +133,10 @@ const createMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['memories'] })
     queryClient.invalidateQueries({ queryKey: ['recent-memories'] })
     queryClient.invalidateQueries({ queryKey: ['tags'] })
-    exp.claimSubmitReward()
+    const rewarded = exp.claimSubmitReward()
+    if (rewarded) {
+      exp.spawnFloating(30)
+    }
     showCreate.value = false
     isUploading.value = false
     resetForm()
@@ -160,14 +163,14 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
 <template>
   <div class="max-w-4xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">记忆</h1>
+      <h1 class="text-2xl font-bold tracking-tight font-display">记忆</h1>
       <div class="flex items-center gap-2">
         <button
           @click="showFavoritesOnly = !showFavoritesOnly"
           :class="[
-            'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors border',
+            'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 border',
             showFavoritesOnly
-              ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+              ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200 shadow-sm'
               : 'border-border bg-card text-muted-foreground hover:bg-accent'
           ]"
         >
@@ -176,7 +179,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         </button>
         <button
           @click="showCreate = !showCreate"
-        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
       >
         <Plus v-if="!showCreate" class="w-4 h-4" />
         <X v-else class="w-4 h-4" />
@@ -185,18 +188,18 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
       </div>
     </div>
 
-    <div v-if="showCreate" class="p-6 rounded-lg border border-border bg-card space-y-4">
+    <div v-if="showCreate" class="p-6 rounded-xl border border-border bg-card space-y-4 shadow-card animate-scale-in">
       <h2 class="font-semibold">新建记忆</h2>
       <div class="grid gap-3">
-        <input v-model="createForm.title" placeholder="标题" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-        <select v-model="createForm.type" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-          <option value="TEXT">📝 文本</option>
-          <option value="IMAGE">🖼️ 图片</option>
+        <input v-model="createForm.title" placeholder="标题" class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200" />
+        <select v-model="createForm.type" class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200">
+          <option value="TEXT">文本</option>
+          <option value="IMAGE">图片</option>
         </select>
 
         <!-- Big tag selector -->
         <div class="space-y-1.5">
-          <label class="text-xs text-muted-foreground font-medium">🏷️ 大标签（可选）</label>
+          <label class="text-xs text-muted-foreground font-medium">大标签（可选）</label>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="opt in BIG_TAG_OPTIONS"
@@ -204,40 +207,40 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
               type="button"
               @click="selectedBigTag = selectedBigTag === opt.value ? '' : opt.value"
               :class="[
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all',
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all duration-200',
                 selectedBigTag === opt.value
                   ? bigTagClass(opt.value) + ' shadow-sm scale-105'
                   : 'border-muted bg-background text-muted-foreground hover:border-border'
               ]"
             >
-              <span>{{ opt.icon }}</span>
+              <component :is="opt.icon" class="w-3.5 h-3.5" />
               <span>{{ opt.label }}</span>
             </button>
           </div>
         </div>
 
-        <input v-model="createForm.sourceUrl" placeholder="来源 URL（可选）" class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+        <input v-model="createForm.sourceUrl" placeholder="来源 URL（可选）" class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200" />
 
         <textarea
           v-model="createForm.content"
           placeholder="写下你的记忆…"
           rows="6"
-          class="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+          class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring resize-y transition-all duration-200"
           @input="exp.onInput()"
         ></textarea>
 
         <!-- Tag selector -->
         <div class="space-y-1.5">
-          <label class="text-xs text-muted-foreground font-medium">🏷️ 标签</label>
+          <label class="text-xs text-muted-foreground font-medium">标签</label>
           <div class="relative" @click="openTagDropdownAndFocus">
-            <div class="flex flex-wrap items-center gap-1.5 px-3 py-2 rounded-md border border-input bg-background cursor-text min-h-[38px]">
+            <div class="flex flex-wrap items-center gap-1.5 px-3 py-2.5 rounded-lg border border-input bg-background cursor-text min-h-[42px] focus-within:ring-2 focus-within:ring-ring/50 focus-within:border-ring transition-all duration-200">
               <span
                 v-for="tag in selectedTags"
                 :key="tag"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary text-xs"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium"
               >
                 {{ tag }}
-                <button @click.stop="removeTag(tag)" class="hover:text-foreground">&times;</button>
+                <button @click.stop="removeTag(tag)" class="hover:text-primary/70 transition-colors">&times;</button>
               </span>
               <input
                 ref="tagInputRef"
@@ -251,7 +254,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
             </div>
             <div
               v-if="tagOpen"
-              class="absolute z-50 mt-1 w-full rounded-md border border-border bg-card shadow-lg max-h-48 overflow-y-auto"
+              class="absolute z-50 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto"
             >
               <div
                 v-for="t in suggestions.slice(0, 20)"
@@ -279,7 +282,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         <button
           @click="createMutation.mutate()"
           :disabled="!createForm.title || !createForm.content || isUploading"
-          class="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          class="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
         >
           <Loader2 v-if="isUploading" class="w-4 h-4 animate-spin inline mr-1" />
           保存记忆
@@ -290,10 +293,11 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
     <div v-if="isLoading" class="text-center py-12 text-muted-foreground">加载中...</div>
     <div v-else class="space-y-3">
       <router-link
-        v-for="m in data?.content"
+        v-for="(m, index) in data?.content"
         :key="m.id"
         :to="`/memories/${m.id}`"
-        class="block p-4 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors relative"
+        class="block p-4 rounded-xl border border-border bg-card hover:bg-accent/50 transition-all duration-200 relative group shadow-card hover:shadow-card-hover"
+        :style="{ animationDelay: `${index * 30}ms` }"
       >
         <!-- Big tag badge (top-right corner) -->
         <div
@@ -309,10 +313,10 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         <div class="flex items-start justify-between gap-3">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
-              <span>{{ typeIcon(m.type) }}</span>
-              <h3 class="font-medium truncate">{{ m.title }}</h3>
+              <component :is="typeIcon(m.type)" class="w-4 h-4 text-muted-foreground shrink-0" />
+              <h3 class="font-medium truncate group-hover:text-primary transition-colors duration-200">{{ m.title }}</h3>
               <span v-if="m.sentiment" :class="['text-xs', sentimentColor(m.sentiment)]">
-                {{ m.sentiment === 'POSITIVE' ? '😊' : m.sentiment === 'NEGATIVE' ? '😔' : '😐' }}
+                {{ m.sentiment === 'POSITIVE' ? '积极' : m.sentiment === 'NEGATIVE' ? '消极' : '中性' }}
               </span>
             </div>
             <p class="text-sm text-muted-foreground line-clamp-2">{{ m.content }}</p>
@@ -333,11 +337,11 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         <!-- Favorite star button -->
         <button
           @click.prevent="toggleFavorite($event, m.id, !!m.favorite)"
-          class="absolute bottom-2 right-2 p-1.5 rounded-md transition-colors hover:bg-accent"
+          class="absolute bottom-2 right-2 p-1.5 rounded-md transition-all duration-200 hover:bg-accent"
           :title="m.favorite ? '取消收藏' : '收藏'"
         >
           <Star
-            class="w-4 h-4 transition-colors"
+            class="w-4 h-4 transition-colors duration-200"
             :class="m.favorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'"
           />
         </button>
@@ -346,9 +350,9 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
     </div>
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-4">
-      <button :disabled="page === 0" @click="page--; queryClient.invalidateQueries({ queryKey: ['memories'] })" class="px-3 py-1.5 rounded-md text-sm border border-border hover:bg-accent disabled:opacity-50 transition-colors">上一页</button>
-      <span class="text-sm text-muted-foreground">{{ page + 1 }} / {{ totalPages }}</span>
-      <button :disabled="page >= totalPages - 1" @click="page++; queryClient.invalidateQueries({ queryKey: ['memories'] })" class="px-3 py-1.5 rounded-md text-sm border border-border hover:bg-accent disabled:opacity-50 transition-colors">下一页</button>
+      <button :disabled="page === 0" @click="page--; queryClient.invalidateQueries({ queryKey: ['memories'] })" class="px-3 py-1.5 rounded-lg text-sm border border-border hover:bg-accent disabled:opacity-50 transition-all duration-200">上一页</button>
+      <span class="text-sm text-muted-foreground tabular-nums">{{ page + 1 }} / {{ totalPages }}</span>
+      <button :disabled="page >= totalPages - 1" @click="page++; queryClient.invalidateQueries({ queryKey: ['memories'] })" class="px-3 py-1.5 rounded-lg text-sm border border-border hover:bg-accent disabled:opacity-50 transition-all duration-200">下一页</button>
     </div>
   </div>
 </template>

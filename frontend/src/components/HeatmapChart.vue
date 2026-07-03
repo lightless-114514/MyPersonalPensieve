@@ -31,6 +31,14 @@ const tooltip = ref<{ x: number; y: number; text: string; visible: boolean }>({
 const MONTH_LABELS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 const DAY_LABELS = ['日', '一', '二', '三', '四', '五', '六']
 
+// Format Date to YYYY-MM-DD in local timezone (avoids toISOString UTC shift)
+function formatDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 // Filter data by period
 const filteredData = computed(() => {
   if (!props.data?.length) return []
@@ -38,16 +46,20 @@ const filteredData = computed(() => {
 
   const now = new Date()
   let startDate: Date
+  let endDate: Date
 
   if (period.value === 'quarter') {
     const quarterStart = Math.floor(now.getMonth() / 3) * 3
     startDate = new Date(now.getFullYear(), quarterStart, 1)
+    endDate = new Date(now.getFullYear(), quarterStart + 3, 0) // last day of quarter
   } else {
     startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0) // last day of month
   }
 
-  const startStr = startDate.toISOString().slice(0, 10)
-  return props.data.filter((d) => d.date >= startStr)
+  const startStr = formatDate(startDate)
+  const endStr = formatDate(endDate)
+  return props.data.filter((d) => d.date >= startStr && d.date <= endStr)
 })
 
 // Get current year
@@ -134,13 +146,34 @@ function renderChart() {
       .text(DAY_LABELS[day])
   })
 
-  // Draw month labels
+  // Determine the intended display month range to avoid showing
+  // months outside the period (e.g. December from previous year in year mode)
+  const now = new Date()
+  let displayMonthMin = 0
+  let displayMonthMax = 11
+  let displayYear = currentYear.value
+
+  if (period.value === 'quarter') {
+    const quarterStart = Math.floor(now.getMonth() / 3) * 3
+    displayMonthMin = quarterStart
+    displayMonthMax = quarterStart + 2
+  } else if (period.value === 'month') {
+    displayMonthMin = now.getMonth()
+    displayMonthMax = now.getMonth()
+  }
+
+  // Draw month labels — only for months within the display range
   let prevMonth = -1
   for (let week = 0; week < totalWeeks; week++) {
     const weekStart = new Date(startSunday)
     weekStart.setDate(weekStart.getDate() + week * 7)
     const month = weekStart.getMonth()
-    if (month !== prevMonth) {
+    const year = weekStart.getFullYear()
+
+    if (month !== prevMonth
+      && month >= displayMonthMin
+      && month <= displayMonthMax
+      && year === displayYear) {
       g.append('text')
         .attr('x', week * cellStep)
         .attr('y', -6)
@@ -160,7 +193,7 @@ function renderChart() {
       // Skip cells outside the data range
       if (cellDate < minDate || cellDate > maxDate) continue
 
-      const dateStr = cellDate.toISOString().slice(0, 10)
+      const dateStr = formatDate(cellDate)
       const dayData = dataMap.get(dateStr)
       const wordCount = dayData?.word_count ?? 0
       const memCount = dayData?.memory_count ?? 0

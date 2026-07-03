@@ -1,24 +1,50 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
-import { getRecentMemories } from '@/api'
-import { formatDate, typeIcon, sentimentColor, bigTagClass, bigTagLabel } from '@/lib/utils'
-import { Brain, ArrowRight } from 'lucide-vue-next'
+import { getRecentMemories, getHeatmap, getWordCloud, getStats } from '@/api'
+import { formatDate, typeIcon, bigTagClass, bigTagLabel } from '@/lib/utils'
+import { Brain, ArrowRight, Activity, Tag } from 'lucide-vue-next'
 import { useGreeting } from '@/composables/useGreeting'
+import HeatmapChart from '@/components/HeatmapChart.vue'
+import WordCloudChart from '@/components/WordCloudChart.vue'
+import StatsCards from '@/components/StatsCards.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const { data: memories, isLoading } = useQuery({
   queryKey: ['recent-memories'],
   queryFn: () => getRecentMemories(10),
 })
 
+const { data: heatmapData } = useQuery({
+  queryKey: ['heatmap'],
+  queryFn: () => getHeatmap(),
+})
+
+const wordCloudPeriod = ref<'month' | 'year'>('month')
+const { data: wordCloudData } = useQuery({
+  queryKey: computed(() => ['wordcloud', wordCloudPeriod.value]),
+  queryFn: () => getWordCloud(wordCloudPeriod.value),
+})
+
+const { data: stats } = useQuery({
+  queryKey: ['stats'],
+  queryFn: () => getStats(),
+})
+
 const hasMemories = computed(() => (memories.value?.length ?? 0) > 0)
 const { greeting } = useGreeting()
+
+function handleWordClick(word: string) {
+  router.push(`/memories?q=${encodeURIComponent(word)}`)
+}
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto space-y-8">
     <!-- Hero -->
-    <div class="text-center py-12 animate-fade-in">
+    <div class="text-center py-10 animate-fade-in">
       <div class="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5 animate-breathe">
         <Brain class="w-10 h-10 text-primary" />
       </div>
@@ -34,6 +60,35 @@ const { greeting } = useGreeting()
         {{ hasMemories ? '记录新的记忆' : '记录第一条记忆' }}
         <ArrowRight class="w-4 h-4" />
       </router-link>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="animate-fade-in">
+      <StatsCards :stats="stats ?? null" />
+    </div>
+
+    <!-- Heatmap -->
+    <div class="rounded-xl border border-border bg-card p-4 shadow-card animate-fade-in">
+      <div class="flex items-center gap-2 mb-2">
+        <Activity class="w-4 h-4 text-primary" />
+        <h2 class="text-sm font-semibold">写作热力图</h2>
+      </div>
+      <HeatmapChart :data="heatmapData ?? []" />
+      <div v-if="!heatmapData?.length" class="flex items-center justify-center h-24 text-muted-foreground text-sm">
+        暂无写作数据
+      </div>
+    </div>
+
+    <!-- Word Cloud -->
+    <div class="rounded-xl border border-border bg-card p-4 shadow-card animate-fade-in">
+      <WordCloudChart :data="wordCloudData ?? []" v-model="wordCloudPeriod" @click-word="handleWordClick">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <Tag class="w-4 h-4 text-primary" />
+            <h2 class="text-sm font-semibold">词汇云图</h2>
+          </div>
+        </template>
+      </WordCloudChart>
     </div>
 
     <!-- Recent memories -->

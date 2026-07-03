@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -7,6 +7,9 @@ import type {
   SentimentTrend,
   ProcessingProgress,
   TagItem,
+  HeatmapDay,
+  WordCloudItem,
+  StatsSummary,
 } from '@/types'
 
 function snakeToCamel(str: string): string {
@@ -97,6 +100,25 @@ export async function getSentimentTrend(days: number = 30, bigTag?: string) {
 
 export async function toggleFavoriteMemory(id: string, favorite: boolean) {
   const { data } = await api.put<Memory>(`/memories/${id}`, { favorite })
+  return data
+}
+
+export async function getHeatmap(year?: number) {
+  const params: any = {}
+  if (year) params.year = year
+  const { data } = await api.get<HeatmapDay[]>('/analytics/heatmap', { params })
+  return data
+}
+
+export async function getWordCloud(period: string = 'month', limit: number = 80) {
+  const { data } = await api.get<WordCloudItem[]>('/analytics/wordcloud', {
+    params: { period, limit },
+  })
+  return data
+}
+
+export async function getStats() {
+  const { data } = await api.get<StatsSummary>('/analytics/stats')
   return data
 }
 

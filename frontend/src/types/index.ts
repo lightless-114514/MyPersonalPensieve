@@ -88,3 +88,21 @@ export interface ProcessingProgress {
   progress: number
   message: string
 }
+
+export interface HeatmapDay {
+  date: string
+  memory_count: number
+  word_count: number
+}
+
+export interface WordCloudItem {
+  word: string
+  count: number
+}
+
+export interface StatsSummary {
+  total_memories: number
+  total_words: number
+  streak_days: number
+  this_month: number
+}

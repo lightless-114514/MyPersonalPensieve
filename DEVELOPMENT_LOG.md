@@ -1,5 +1,49 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-07-03 — 首页数据统计仪表盘 + 热力图Bug修复
+
+### 功能概述
+
+在首页Hero区域下方嵌入数据统计仪表盘，包含GitHub风格写作热力图、高频词汇云图、4格统计卡片，提供视觉化的"成就感"反馈。
+
+### 后端API（3个新端点）
+
+| 端点 | 说明 |
+|------|------|
+| `GET /api/analytics/heatmap` | 返回全年365天每日字数/记忆数 |
+| `GET /api/analytics/wordcloud` | 返回高频标签词频（支持period参数） |
+| `GET /api/analytics/stats` | 返回汇总统计（总记忆/总字数/连续天数/本月新增） |
+
+### 前端组件（3个新组件）
+
+| 组件 | 说明 |
+|------|------|
+| `HeatmapChart.vue` | D3.js SVG热力图，53×7矩阵，5级绿色色阶，全年/本季度/本月切换 |
+| `WordCloudChart.vue` | Canvas螺旋布局词云，本月/本年切换 |
+| `StatsCards.vue` | 4格统计卡片（总记忆/总字数/连续天数/本月新增） |
+
+### 热力图Bug修复
+
+| Bug | 根因 | 修复 |
+|-----|------|------|
+| 全年模式12月/1月标签重叠 | startSunday回退到前一年12月，月份标签从12月开始渲染 | 月份标签增加displayMonthMin/Max/Year范围过滤 |
+| 本月/本季度显示6个月数据 | filteredData只有startDate过滤，无endDate边界 | 添加endDate过滤（季度末日/月末） |
+| 日期偏移1天 | toISOString()在UTC+8下把7月1日转为"2026-06-30" | 新增formatDate()本地时间格式化 |
+
+### 文件改动
+
+| 文件 | 改动类型 |
+|------|----------|
+| `backend/app/routes/analytics.py` | 新增3个API端点 |
+| `frontend/src/types/index.ts` | 新增HeatmapDay/WordCloudItem/StatsSummary类型 |
+| `frontend/src/api/index.ts` | 新增getHeatmap/getWordCloud/getStats函数 |
+| `frontend/src/components/HeatmapChart.vue` | 新建：D3热力图组件 |
+| `frontend/src/components/WordCloudChart.vue` | 新建：Canvas词云组件 |
+| `frontend/src/components/StatsCards.vue` | 新建：统计卡片组件 |
+| `frontend/src/pages/HomePage.vue` | 嵌入仪表盘三组件 |
+
+---
+
 ## 2026-07-02 — huashu-design 美化：反AI slop系统性重构
 
 ### 设计哲学

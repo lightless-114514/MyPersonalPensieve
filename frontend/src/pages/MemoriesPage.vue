@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getMemories, createMemory, getTags, toggleFavoriteMemory } from '@/api'
@@ -15,6 +15,13 @@ const exp = useExperienceStore()
 const page = ref(0)
 const showFavoritesOnly = ref(false)
 const showCreate = ref(route.query.new === 'true')
+
+// 监听路由 query 变化，解决同页面点击"新建记忆"不生效的问题
+watch(() => route.query.new, (val) => {
+  if (val === 'true') {
+    showCreate.value = true
+  }
+})
 const isUploading = ref(false)
 
 const createForm = ref({ title: '', content: '', type: 'TEXT', sourceUrl: '' })

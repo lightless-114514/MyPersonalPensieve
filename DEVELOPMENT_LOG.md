@@ -1,5 +1,60 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-07-04 — 记忆对比功能 + 新建记忆按钮Bug修复 + 超时优化
+
+### 功能概述
+
+新增AI驱动的记忆对比功能，支持选择多组记忆进行智能对比分析；修复左下角新建记忆按钮在同页面下无法响应的Bug；修复对比接口500错误；优化前后端超时配置以支持LLM长耗时调用。
+
+### 新建记忆按钮Bug修复
+
+| Bug | 根因 | 修复 |
+|-----|------|------|
+| 左下角"新建记忆"按钮点击无反应 | MemoriesPage仅在初始化时读取`route.query.new`，同页面导航不会重新执行setup | 添加`watch(() => route.query.new)`监听路由变化，动态设置`showCreate` |
+
+### 对比接口500错误修复
+
+| Bug | 根因 | 修复 |
+|-----|------|------|
+| `/api/compare` 返回500 MissingGreenlet | SQLAlchemy async session中访问`m.tags`触发懒加载，异步上下文不支持 | `_fetch_memories()`查询添加`.options(selectinload(Memory.tags))`预加载 |
+
+### 超时优化
+
+| 问题 | 根因 | 修复 |
+|------|------|------|
+| 前端30秒超时 `timeout of 30000ms exceeded` | LLM调用DeepSeek API耗时超过axios默认30s | axios请求添加`{ timeout: 120000 }` |
+| Vite代理超时 | Vite dev server proxy默认超时较短 | proxy配置添加`timeout: 120000` |
+| 后端LLM调用无超时保护 | 无 | `asyncio.wait_for(timeout=90.0)`包裹LLM调用 |
+
+### 后端API（1个新端点）
+
+| 端点 | 说明 |
+|------|------|
+| `POST /api/compare` | 接收source_ids/target_ids，AI对比分析返回对比结果 |
+
+### 前端页面（1个新页面）
+
+| 页面 | 说明 |
+|------|------|
+| `ComparePage.vue` | 记忆对比页面，左右分栏选择源/目标记忆，展示AI对比结果 |
+
+### 文件改动
+
+| 文件 | 改动类型 |
+|------|----------|
+| `frontend/src/pages/MemoriesPage.vue` | 添加route.query watcher修复按钮Bug |
+| `backend/app/routes/compare.py` | 新增：对比API路由（含selectinload修复+超时保护） |
+| `backend/app/schemas/compare.py` | 新增：对比请求/响应Schema |
+| `backend/app/main.py` | 注册compare路由 |
+| `frontend/src/pages/ComparePage.vue` | 新建：记忆对比页面 |
+| `frontend/src/components/Sidebar.vue` | 添加对比入口 |
+| `frontend/src/router/index.ts` | 添加对比路由 |
+| `frontend/src/api/index.ts` | 新增compareMemories函数（120s超时） |
+| `frontend/src/types/index.ts` | 新增对比相关类型 |
+| `frontend/vite.config.ts` | proxy超时配置120s |
+
+---
+
 ## 2026-07-03 — 首页数据统计仪表盘 + 热力图Bug修复
 
 ### 功能概述

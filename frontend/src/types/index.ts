@@ -106,3 +106,26 @@ export interface StatsSummary {
   streak_days: number
   this_month: number
 }
+
+// ---- Compare feature ----
+
+export interface ComparePoint {
+  content: string
+  sourceRefs?: string[]
+  targetRefs?: string[]
+}
+
+export interface CompareResult {
+  similarities: ComparePoint[]
+  differences: ComparePoint[]
+  sourceSummary: string
+  targetSummary: string
+  timeSpanDays: number | null
+  earliestDate: string | null
+  latestDate: string | null
+  sourceCount: number
+  targetCount: number
+  sourceTags: string[]
+  targetTags: string[]
+  growthInsight: string | null
+}

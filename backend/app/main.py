@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db.session import init_db
-from app.routes import memories, analytics
+from app.routes import memories, analytics, compare
 from app.services.redis_service import redis_service
 from app.services.llm_service import llm_service
 from app.services.qdrant_service import qdrant_service
@@ -60,6 +60,7 @@ async def api_key_middleware(request: Request, call_next):
 
 app.include_router(memories.router)
 app.include_router(analytics.router)
+app.include_router(compare.router)
 
 
 @app.get("/api/health")

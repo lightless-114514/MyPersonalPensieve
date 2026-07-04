@@ -29,6 +29,11 @@ const router = createRouter({
       component: () => import('@/pages/AnalyticsPage.vue'),
     },
     {
+      path: '/compare',
+      name: 'compare',
+      component: () => import('@/pages/ComparePage.vue'),
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('@/pages/SettingsPage.vue'),

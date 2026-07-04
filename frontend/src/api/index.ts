@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -10,6 +10,7 @@ import type {
   HeatmapDay,
   WordCloudItem,
   StatsSummary,
+  CompareResult,
 } from '@/types'
 
 function snakeToCamel(str: string): string {
@@ -119,6 +120,14 @@ export async function getWordCloud(period: string = 'month', limit: number = 80)
 
 export async function getStats() {
   const { data } = await api.get<StatsSummary>('/analytics/stats')
+  return data
+}
+
+export async function compareMemories(sourceIds: string[], targetIds: string[]) {
+  const { data } = await api.post<CompareResult>('/compare', {
+    source_ids: sourceIds,
+    target_ids: targetIds,
+  }, { timeout: 120000 })
   return data
 }
 

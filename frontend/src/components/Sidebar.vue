@@ -8,6 +8,7 @@ import {
   Search,
   GitGraph,
   BarChart3,
+  GitCompare,
   Settings,
   Sun,
   Moon,
@@ -29,6 +30,7 @@ const navItems = [
   { to: '/memories', label: '记忆', icon: Search },
   { to: '/graph', label: '图谱', icon: GitGraph },
   { to: '/analytics', label: '分析', icon: BarChart3 },
+  { to: '/compare', label: '对比', icon: GitCompare },
   { to: '/settings', label: '设置', icon: Settings },
 ]
 

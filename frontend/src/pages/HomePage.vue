@@ -9,6 +9,7 @@ import HeatmapChart from '@/components/HeatmapChart.vue'
 import WordCloudChart from '@/components/WordCloudChart.vue'
 import StatsCards from '@/components/StatsCards.vue'
 import { useRouter } from 'vue-router'
+import { getFilePreviewUrl } from '@/api'
 
 const router = useRouter()
 
@@ -120,6 +121,14 @@ function handleWordClick(word: string) {
                 <h3 class="font-medium truncate group-hover:text-primary transition-colors duration-200">{{ m.title }}</h3>
               </div>
               <p class="text-sm text-muted-foreground line-clamp-2">{{ m.content }}</p>
+            </div>
+            <!-- 图片缩略图 -->
+            <div v-if="m.type === 'IMAGE' && m.filePath" class="shrink-0">
+              <img :src="getFilePreviewUrl(m.id)" :alt="m.title" class="w-12 h-12 object-cover rounded-lg border border-border" />
+            </div>
+            <!-- 文件类型图标 -->
+            <div v-else-if="m.type === 'FILE'" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-accent/50 border border-border">
+              <component :is="typeIcon(m.type)" class="w-5 h-5 text-muted-foreground" />
             </div>
             <span class="text-xs text-muted-foreground shrink-0">{{ formatDate(m.createdAt || '') }}</span>
           </div>

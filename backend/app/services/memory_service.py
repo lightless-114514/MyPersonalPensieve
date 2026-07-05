@@ -32,6 +32,9 @@ class MemoryService:
             content=request.content,
             type=mem_type,
             source_url=request.source_url,
+            file_path=request.file_path,
+            file_size=request.file_size,
+            mime_type=request.mime_type,
             big_tag=big_tag,
             favorite=request.favorite,
         )
@@ -64,6 +67,8 @@ class MemoryService:
             type=memory.type.value if memory.type else "TEXT",
             source_url=memory.source_url,
             file_path=memory.file_path,
+            file_size=memory.file_size,
+            mime_type=memory.mime_type,
             sentiment=None,
             sentiment_score=memory.sentiment_score,
             processing_status=memory.processing_status.value if memory.processing_status else "PENDING",
@@ -228,6 +233,12 @@ class MemoryService:
             memory.source_url = request.source_url
         if request.favorite is not None:
             memory.favorite = request.favorite
+        if request.file_path is not None:
+            memory.file_path = request.file_path
+        if request.file_size is not None:
+            memory.file_size = request.file_size
+        if request.mime_type is not None:
+            memory.mime_type = request.mime_type
 
         if request.big_tag is not None:
             if request.big_tag == "":
@@ -258,10 +269,26 @@ class MemoryService:
         # Refetch to get fresh state
         return await self.get_by_id(db, memory_id)
 
-    
-        memory = await db.get(Memory, memory_id)
+    async def delete(self, db: AsyncSession, memory_id: str) -> None:
+        """删除记忆及其关联的文件。"""
+        query = (
+            select(Memory)
+            .options(selectinload(Memory.tags))
+            .where(Memory.id == memory_id)
+        )
+        result = await db.execute(query)
+        memory = result.scalar_one_or_none()
         if not memory:
             raise ValueError(f"Memory not found: {memory_id}")
+
+        # 删除关联文件
+        if memory.file_path:
+            try:
+                from app.services.upload_service import delete_file
+                delete_file(memory.file_path)
+            except Exception:
+                pass
+
         await db.delete(memory)
         await db.commit()
         await redis_service.evict_recent_memories()
@@ -275,6 +302,8 @@ class MemoryService:
             type=m.type.value if m.type else "TEXT",
             source_url=m.source_url,
             file_path=m.file_path,
+            file_size=m.file_size,
+            mime_type=m.mime_type,
             sentiment=m.sentiment.value if m.sentiment else None,
             sentiment_score=m.sentiment_score,
             processing_status=m.processing_status.value if m.processing_status else "PENDING",

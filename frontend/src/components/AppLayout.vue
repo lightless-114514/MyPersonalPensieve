@@ -5,6 +5,14 @@ import Sidebar from './Sidebar.vue'
 
 const route = useRoute()
 const settings = useSettingsStore()
+
+// 确保离开页面时清理可能阻塞的动画状态
+function onBeforeLeave() {
+  // 强制移除可能残留的过渡类，防止卡住
+  document.querySelectorAll('.page-enter-active, .page-leave-active').forEach(el => {
+    el.classList.remove('page-enter-active', 'page-leave-active')
+  })
+}
 </script>
 
 <template>
@@ -12,8 +20,8 @@ const settings = useSettingsStore()
     <Sidebar />
     <main class="flex-1 overflow-y-auto p-6">
       <router-view v-slot="{ Component }">
-        <transition name="page" mode="out-in">
-          <component :is="Component" />
+        <transition name="page" mode="out-in" @before-leave="onBeforeLeave">
+          <component :is="Component" :key="$route.path" />
         </transition>
       </router-view>
     </main>
@@ -23,9 +31,11 @@ const settings = useSettingsStore()
 <style scoped>
 .page-enter-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
+  will-change: opacity, transform;
 }
 .page-leave-active {
   transition: opacity 0.15s ease;
+  will-change: opacity;
 }
 .page-enter-from {
   opacity: 0;

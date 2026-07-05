@@ -2,7 +2,7 @@
 import { twMerge } from 'tailwind-merge'
 import type { BigTagCategory } from '@/types'
 import type { Component } from 'vue'
-import { FileText, ImageIcon, File, BookOpen, PenLine, Lightbulb, Scale } from 'lucide-vue-next'
+import { FileText, ImageIcon, File, BookOpen, PenLine, Lightbulb, Scale, FileSpreadsheet } from 'lucide-vue-next'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -52,9 +52,30 @@ export function typeIcon(type: string): Component {
       return FileText
     case 'IMAGE':
       return ImageIcon
+    case 'FILE':
+      return FileSpreadsheet
     default:
       return File
   }
+}
+
+/** 根据 MIME 类型返回文件类型图标名称 */
+export function fileIconName(mimeType?: string | null): string {
+  if (!mimeType) return 'file'
+  if (mimeType.startsWith('image/')) return 'image'
+  if (mimeType === 'application/pdf') return 'file-text'
+  if (mimeType.includes('word') || mimeType.includes('document')) return 'file-text'
+  if (mimeType === 'application/json') return 'file-json'
+  if (mimeType.startsWith('text/')) return 'file-text'
+  return 'file'
+}
+
+/** 格式化文件大小 */
+export function formatFileSize(bytes?: number | null): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 // ---- Big Tag helpers ----

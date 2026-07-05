@@ -5,12 +5,15 @@ from typing import Optional
 
 class MemoryRequest(BaseModel):
     title: str
-    content: str
+    content: str = ""
     type: str = "TEXT"
     source_url: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     big_tag: Optional[str] = None
     favorite: bool = False
+    file_path: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
 
 
 class UpdateMemoryRequest(BaseModel):
@@ -22,6 +25,9 @@ class UpdateMemoryRequest(BaseModel):
     tags: Optional[list[str]] = None
     big_tag: Optional[str] = None
     favorite: Optional[bool] = None
+    file_path: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
 
 
 class MemoryResponse(BaseModel):
@@ -31,6 +37,8 @@ class MemoryResponse(BaseModel):
     type: str
     source_url: Optional[str] = None
     file_path: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
     sentiment: Optional[str] = None
     sentiment_score: Optional[float] = None
     processing_status: str

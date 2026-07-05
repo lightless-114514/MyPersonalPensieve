@@ -2,11 +2,13 @@
 import { ref, computed, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { getMemories, createMemory, getTags, toggleFavoriteMemory } from '@/api'
-import { formatDate, typeIcon, sentimentColor, BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
+import { getMemories, createMemory, getTags, toggleFavoriteMemory, uploadMemoryFile } from '@/api'
+import { formatDate, typeIcon, sentimentColor, BIG_TAG_OPTIONS, bigTagClass, bigTagLabel, formatFileSize } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
 import { useExperienceStore } from '@/stores/experience'
 import { Search, Plus, X, Loader2, Tag, Star } from 'lucide-vue-next'
+import FileDropZone from '@/components/FileDropZone.vue'
+import { getFilePreviewUrl } from '@/api'
 
 const route = useRoute()
 const queryClient = useQueryClient()
@@ -23,6 +25,7 @@ watch(() => route.query.new, (val) => {
   }
 })
 const isUploading = ref(false)
+const selectedFile = ref<File | null>(null)
 
 const createForm = ref({ title: '', content: '', type: 'TEXT', sourceUrl: '' })
 const selectedTags = ref<string[]>([])
@@ -126,6 +129,17 @@ const favoriteMutation = useMutation({
 const createMutation = useMutation({
   mutationFn: async () => {
     isUploading.value = true
+    // 如果有文件，走文件上传 API
+    if (selectedFile.value) {
+      return uploadMemoryFile(selectedFile.value, {
+        title: createForm.value.title.trim() || undefined,
+        content: createForm.value.content.trim() || undefined,
+        sourceUrl: createForm.value.sourceUrl.trim() || undefined,
+        tags: [...selectedTags.value],
+        bigTag: selectedBigTag.value || undefined,
+      })
+    }
+    // 否则走普通创建 API
     const payload: any = {
       title: createForm.value.title.trim(),
       content: createForm.value.content.trim(),
@@ -156,6 +170,7 @@ function resetForm() {
   selectedTags.value = []
   selectedBigTag.value = ''
   tagText.value = ''
+  selectedFile.value = null
 }
 
 
@@ -199,10 +214,6 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
       <h2 class="font-semibold">新建记忆</h2>
       <div class="grid gap-3">
         <input v-model="createForm.title" placeholder="标题" class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200" />
-        <select v-model="createForm.type" class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200">
-          <option value="TEXT">文本</option>
-          <option value="IMAGE">图片</option>
-        </select>
 
         <!-- Big tag selector -->
         <div class="space-y-1.5">
@@ -227,6 +238,12 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         </div>
 
         <input v-model="createForm.sourceUrl" placeholder="来源 URL（可选）" class="w-full px-3 py-2.5 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200" />
+
+        <!-- 文件上传区域 -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-muted-foreground font-medium">附件（可选）</label>
+          <FileDropZone v-model="selectedFile" />
+        </div>
 
         <textarea
           v-model="createForm.content"
@@ -288,7 +305,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
       <div class="flex items-center gap-3">
         <button
           @click="createMutation.mutate()"
-          :disabled="!createForm.title || !createForm.content || isUploading"
+          :disabled="(!createForm.title && !selectedFile) || isUploading"
           class="px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]"
         >
           <Loader2 v-if="isUploading" class="w-4 h-4 animate-spin inline mr-1" />
@@ -325,8 +342,17 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
               <span v-if="m.sentiment" :class="['text-xs', sentimentColor(m.sentiment)]">
                 {{ m.sentiment === 'POSITIVE' ? '积极' : m.sentiment === 'NEGATIVE' ? '消极' : '中性' }}
               </span>
+              <span v-if="m.fileSize" class="text-xs text-muted-foreground">{{ formatFileSize(m.fileSize) }}</span>
             </div>
             <p class="text-sm text-muted-foreground line-clamp-2">{{ m.content }}</p>
+          </div>
+          <!-- 图片缩略图 -->
+          <div v-if="m.type === 'IMAGE' && m.filePath" class="shrink-0">
+            <img :src="getFilePreviewUrl(m.id)" :alt="m.title" class="w-16 h-16 object-cover rounded-lg border border-border" />
+          </div>
+          <!-- 文件类型图标 -->
+          <div v-else-if="m.type === 'FILE'" class="shrink-0 w-12 h-12 flex items-center justify-center rounded-lg bg-accent/50 border border-border">
+            <component :is="typeIcon(m.type)" class="w-6 h-6 text-muted-foreground" />
           </div>
           <span class="text-xs text-muted-foreground shrink-0">{{ formatDate(m.createdAt || '') }}</span>
         </div>

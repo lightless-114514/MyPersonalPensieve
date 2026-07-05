@@ -2,9 +2,11 @@
   id: string
   title: string
   content: string
-  type: 'TEXT' | 'IMAGE'
+  type: 'TEXT' | 'IMAGE' | 'FILE'
   source_url?: string | null
   file_path?: string | null
+  file_size?: number | null
+  mime_type?: string | null
   sentiment?: 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL' | null
   sentiment_score?: number | null
   processing_status: string
@@ -15,6 +17,8 @@
   // convenience aliases
   sourceUrl?: string
   filePath?: string
+  fileSize?: number
+  mimeType?: string
   sentimentScore?: number
   processingStatus?: string
   bigTag?: BigTagCategory | null

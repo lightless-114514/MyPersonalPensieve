@@ -12,6 +12,7 @@ import enum
 class MemoryType(str, enum.Enum):
     TEXT = "TEXT"
     IMAGE = "IMAGE"
+    FILE = "FILE"
 
 
 class Sentiment(str, enum.Enum):
@@ -54,6 +55,8 @@ class Memory(Base):
     type: Mapped[MemoryType] = mapped_column(SAEnum(MemoryType), nullable=False, default=MemoryType.TEXT)
     source_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    file_size: Mapped[int | None] = mapped_column(Float, nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sentiment: Mapped[Sentiment | None] = mapped_column(SAEnum(Sentiment), nullable=True)
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     processing_status: Mapped[ProcessingStatus] = mapped_column(

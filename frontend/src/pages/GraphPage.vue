@@ -54,6 +54,18 @@ const { data: graph } = useQuery({
 })
 
 let simulation: d3.Simulation<any, any> | null = null
+let isUnmounted = false
+let pendingTimers: number[] = []
+
+function safeTimeout(fn: () => void, delay: number) {
+  const id = window.setTimeout(() => {
+    // 从 pending 列表中移除（已执行）
+    pendingTimers = pendingTimers.filter(t => t !== id)
+    if (!isUnmounted) fn()
+  }, delay)
+  pendingTimers.push(id)
+  return id
+}
 
 function buildHierarchy(nodes: any[], links: any[]) {
   const nodeMap = new Map<string, any>()
@@ -326,7 +338,7 @@ function renderTree() {
 
 function toggleLayout() {
   layoutMode.value = layoutMode.value === 'force' ? 'tree' : 'force'
-  setTimeout(renderGraph, 50)
+  safeTimeout(renderGraph, 50)
 }
 
 function setFilter(bigTag: BigTagCategory | '') {
@@ -343,16 +355,29 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  simulation?.stop()
+  isUnmounted = true
+  // 清除所有 pending 的定时器
+  pendingTimers.forEach(id => window.clearTimeout(id))
+  pendingTimers = []
+  // 彻底停止 D3 simulation 并移除 tick 监听
+  if (simulation) {
+    simulation.on('tick', null)
+    simulation.stop()
+    simulation = null
+  }
+  // 清理 SVG 元素，防止内存泄漏
+  if (container.value) {
+    d3.select(container.value).selectAll('svg').remove()
+  }
   window.removeEventListener('resize', handleResize)
 })
 
 watch(graph, () => {
-  setTimeout(renderGraph, 100)
+  safeTimeout(renderGraph, 100)
 })
 
 watch(layoutMode, () => {
-  setTimeout(renderGraph, 50)
+  safeTimeout(renderGraph, 50)
 })
 </script>
 

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -54,6 +54,32 @@ api.interceptors.response.use((response) => {
 export async function createMemory(payload: any) {
   const { data } = await api.post<Memory>('/memories', payload)
   return data
+}
+
+export async function uploadMemoryFile(file: File, options: {
+  title?: string
+  content?: string
+  sourceUrl?: string
+  tags?: string[]
+  bigTag?: string
+} = {}) {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (options.title) formData.append('title', options.title)
+  if (options.content) formData.append('content', options.content)
+  if (options.sourceUrl) formData.append('source_url', options.sourceUrl)
+  if (options.tags?.length) formData.append('tags', options.tags.join(','))
+  if (options.bigTag) formData.append('big_tag', options.bigTag)
+  const { data } = await api.post<Memory>('/files/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  })
+  return data
+}
+
+export function getFilePreviewUrl(memoryId: string): string {
+  // 添加时间戳防止浏览器缓存旧的 404 响应
+  return `${API_BASE}/files/${memoryId}/download?t=${Date.now()}`
 }
 
 export async function updateMemory(id: string, payload: any) {

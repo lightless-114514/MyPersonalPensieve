@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿<script setup lang="ts">
+﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
@@ -7,6 +7,7 @@ import { formatDate, typeIcon, sentimentColor, sentimentBg, bigTagClass, bigTagL
 import type { BigTagCategory } from '@/types'
 import { useExperienceStore } from '@/stores/experience'
 import { ArrowLeft, Trash2, ExternalLink, Edit3, Save, X, Star } from 'lucide-vue-next'
+import FilePreview from '@/components/FilePreview.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -298,10 +299,15 @@ function toggleFavorite() {
         </span>
       </div>
 
-      <!-- File -->
-      <div v-if="memory.filePath" class="p-3 rounded-lg bg-accent/50 text-sm text-muted-foreground border border-border/50">
-        附件: {{ memory.filePath }}
-      </div>
+      <!-- File preview -->
+      <FilePreview
+        v-if="memory.filePath"
+        :memory-id="memory.id"
+        :file-path="memory.filePath"
+        :mime-type="memory.mimeType"
+        :file-size="memory.fileSize"
+        :title="memory.title"
+      />
     </div>
   </div>
 </template>

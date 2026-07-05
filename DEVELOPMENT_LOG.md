@@ -1,5 +1,64 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-07-05 — 图片预览Bug修复 + 页面卡死Bug修复 + 标签下拉栏UX增强
+
+### 功能概述
+
+修复两个关键前端Bug：①图片上传后不显示预览 ②页面卡死无法切换路由。两者实为同一根因的级联故障。同时为标签下拉栏添加关闭按钮和失焦自动隐藏功能。
+
+### Bug 1：图片上传后不显示预览
+
+**根因**：`FileDropZone.vue` 模板中直接使用 `URL.createObjectURL(selectedFile)`，但 Vue 3 `<script setup>` 模板渲染上下文无法访问全局 `URL` 对象，导致 `Uncaught TypeError: Cannot read properties of undefined (reading 'createObjectURL')`，渲染崩溃。
+
+**修复**：
+| 文件 | 改动 |
+|------|------|
+| `components/FileDropZone.vue` | 新增 `previewUrl` computed 在 `<script setup>` 作用域内调用 `URL.createObjectURL()`；新增 `objectUrl` 变量追踪对象URL，computed重新求值时自动 `revokeObjectURL()`；新增 `onUnmounted` 钩子释放对象URL防内存泄漏；模板 `:src="URL.createObjectURL(selectedFile)"` → `:src="previewUrl"` |
+
+### Bug 2：页面卡死无法切换路由
+
+**根因**：FileDropZone 组件渲染崩溃破坏 Vue 虚拟DOM树完整性，级联引发 `parentNode`/`nextSibling` 为 null 的错误，导致 `<transition mode="out-in">` 路由过渡无法完成，页面卡死在当前路由。
+
+**修复**：同Bug 1，修复 FileDropZone 根因后级联故障自动消除。
+
+### 辅助修复（非根因，保留）
+
+| 文件 | 改动 | 说明 |
+|------|------|------|
+| `backend/app/routes/files.py` | inline模式不再设置filename | 避免Content-Disposition干扰 |
+| `frontend/src/api/index.ts` | getFilePreviewUrl添加时间戳防缓存 | `?t=${Date.now()}` |
+| `frontend/src/pages/GraphPage.vue` | D3 simulation生命周期清理 | onUnmounted中停止simulation |
+| `frontend/src/components/AppLayout.vue` | transition @before-leave保护 | 防止未完成过渡 |
+
+### 标签下拉栏UX增强
+
+**MemoriesPage.vue**：
+- 新增 `tagBlurTimer`、`onTagBlur`、`cancelTagBlur`、`closeTagDropdown` 函数
+- input 添加 `@blur="onTagBlur"` 事件，离开输入框150ms后自动隐藏下拉
+- 下拉栏顶部添加"选择标签"标题 + X关闭按钮
+- 建议项 `@mousedown.prevent` 改为 `cancelTagBlur(); addTag(t.tag)` 防误关
+- `addTag` 函数添加 `cancelTagBlur()` + `nextTick` 回聚焦
+
+**MemoryDetailPage.vue**：
+- 新增 `editTagInputRef`、`editTagBlurTimer`、`onEditTagBlur`、`cancelEditTagBlur`、`closeEditTagDropdown`
+- 新增 `getTags` 查询和 `editSuggestions` computed（原来编辑时无标签建议）
+- input 添加 `@blur="onEditTagBlur"` + `ref="editTagInputRef"`
+- 下拉栏添加关闭按钮头部 + 建议项列表 + 空状态提示
+
+### 文件改动
+
+| 文件 | 改动类型 |
+|------|----------|
+| `frontend/src/components/FileDropZone.vue` | 核心根因修复：previewUrl computed + onUnmounted内存释放 |
+| `frontend/src/pages/MemoriesPage.vue` | 标签下拉栏UX增强：关闭按钮 + blur自动隐藏 |
+| `frontend/src/pages/MemoryDetailPage.vue` | 编辑标签同样增强 + 新增标签建议 |
+| `backend/app/routes/files.py` | FileResponse inline模式filename修复 |
+| `frontend/src/api/index.ts` | 文件预览URL缓存破坏 |
+| `frontend/src/pages/GraphPage.vue` | D3 simulation生命周期清理 |
+| `frontend/src/components/AppLayout.vue` | transition过渡保护 |
+
+---
+
 ## 2026-07-04 — 记忆对比功能 + 新建记忆按钮Bug修复 + 超时优化
 
 ### 功能概述

@@ -1,8 +1,8 @@
-﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
-import { ref } from 'vue'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
+import { ref, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
-import { getMemory, deleteMemory, updateMemory, toggleFavoriteMemory } from '@/api'
+import { getMemory, deleteMemory, updateMemory, toggleFavoriteMemory, getTags } from '@/api'
 import { formatDate, typeIcon, sentimentColor, sentimentBg, bigTagClass, bigTagLabel, BIG_TAG_OPTIONS } from '@/lib/utils'
 import type { BigTagCategory } from '@/types'
 import { useExperienceStore } from '@/stores/experience'
@@ -20,6 +20,8 @@ const editForm = ref({ title: '', content: '', sourceUrl: '', bigTag: '' as BigT
 // Tag editor state
 const editTagText = ref('')
 const editTagOpen = ref(false)
+const editTagInputRef = ref<HTMLInputElement | null>(null)
+const editTagBlurTimer = ref<number | null>(null)
 
 const { data: memory, isLoading } = useQuery({
   queryKey: ['memory', route.params.id],
@@ -47,6 +49,8 @@ function addEditTag(tag: string) {
   if (!t || editForm.value.tags.includes(t)) return
   editForm.value.tags.push(t)
   editTagText.value = ''
+  cancelEditTagBlur()
+  nextTick(() => editTagInputRef.value?.focus())
 }
 
 function removeEditTag(tag: string) {
@@ -65,6 +69,42 @@ function onEditTagKeydown(e: KeyboardEvent) {
     editForm.value.tags.pop()
   }
 }
+
+function onEditTagBlur() {
+  editTagBlurTimer.value = window.setTimeout(() => {
+    editTagOpen.value = false
+  }, 150)
+}
+
+function cancelEditTagBlur() {
+  if (editTagBlurTimer.value) {
+    window.clearTimeout(editTagBlurTimer.value)
+    editTagBlurTimer.value = null
+  }
+}
+
+function closeEditTagDropdown() {
+  editTagOpen.value = false
+  cancelEditTagBlur()
+}
+
+const { data: allTags } = useQuery({
+  queryKey: ['tags'],
+  queryFn: () => getTags(void 0, 100),
+  placeholderData: (prev: any) => prev,
+  staleTime: 30_000,
+})
+
+const editSuggestions = computed(() => {
+  const tags = allTags.value
+  if (!tags || tags.length === 0) return []
+  const q = editTagText.value.trim().toLowerCase()
+  let filtered = tags.filter((t: any) => !editForm.value.tags.includes(t.tag))
+  if (q) {
+    filtered = filtered.filter((t: any) => t.tag.toLowerCase().includes(q))
+  }
+  return filtered
+})
 
 const updateMutation = useMutation({
   mutationFn: async () => {
@@ -241,14 +281,43 @@ function toggleFavorite() {
                   <button @click="removeEditTag(tag)" class="hover:text-primary/70 transition-colors">&times;</button>
                 </span>
                 <input
+                  ref="editTagInputRef"
                   v-model="editTagText"
                   @keydown="onEditTagKeydown"
                   @focus="editTagOpen = true"
+                  @blur="onEditTagBlur"
                   placeholder="添加标签..."
                   class="flex-1 min-w-[80px] bg-transparent text-sm outline-none border-none p-0"
                 />
               </div>
-            </div>
+              <div
+                v-if="editTagOpen"
+                class="absolute z-50 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto"
+              >
+                <div class="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/30">
+                  <span class="text-xs text-muted-foreground">选择标签</span>
+                  <button @mousedown.prevent="closeEditTagDropdown" class="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                    <X class="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div
+                  v-for="t in editSuggestions.slice(0, 20)"
+                  :key="t.tag"
+                  @mousedown.prevent="cancelEditTagBlur(); addEditTag(t.tag)"
+                  class="flex items-center justify-between px-3 py-2 text-sm hover:bg-accent cursor-pointer transition-colors"
+                >
+                  <span>{{ t.tag }}</span>
+                  <span class="text-xs text-muted-foreground">{{ t.count }}</span>
+                </div>
+                <div v-if="editSuggestions.length === 0" class="px-3 py-4 text-sm text-center text-muted-foreground">
+                  <template v-if="editTagText">
+                    按 <kbd class="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">Enter</kbd> 创建 "{{ editTagText }}"
+                  </template>
+                  <template v-else>
+                    输入标签名，按 <kbd class="px-1.5 py-0.5 rounded bg-muted text-xs font-mono">Enter</kbd> 添加
+                  </template>
+                </div>
+              </div>
           </div>
         </div>
 

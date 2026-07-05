@@ -35,6 +35,7 @@ const selectedBigTag = ref<BigTagCategory | ''>('')
 const tagText = ref('')
 const tagOpen = ref(false)
 const tagInputRef = ref<HTMLInputElement | null>(null)
+const tagBlurTimer = ref<number | null>(null)
 
 const { data: allTags } = useQuery({
   queryKey: ['tags'],
@@ -60,6 +61,7 @@ function addTag(tag: string) {
   if (!selectedTags.value.includes(t)) selectedTags.value.push(t)
   tagText.value = ''
   tagOpen.value = true
+  cancelTagBlur()
   nextTick(() => tagInputRef.value?.focus())
 }
 
@@ -97,8 +99,27 @@ function onTagInput() {
   tagOpen.value = true
 }
 
+function onTagBlur() {
+  tagBlurTimer.value = window.setTimeout(() => {
+    tagOpen.value = false
+  }, 150)
+}
+
+function cancelTagBlur() {
+  if (tagBlurTimer.value) {
+    window.clearTimeout(tagBlurTimer.value)
+    tagBlurTimer.value = null
+  }
+}
+
+function closeTagDropdown() {
+  tagOpen.value = false
+  cancelTagBlur()
+}
+
 function openTagDropdownAndFocus() {
   tagOpen.value = true
+  cancelTagBlur()
   nextTick(() => tagInputRef.value?.focus())
 }
 // ---- End tag selector ----
@@ -272,6 +293,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
                 @keydown="onTagKeydown"
                 @input="onTagInput"
                 @focus="tagOpen = true"
+                @blur="onTagBlur"
                 placeholder="输入标签，用逗号分隔多个"
                 class="flex-1 min-w-[80px] bg-transparent text-sm outline-none border-none p-0"
               />
@@ -280,10 +302,16 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
               v-if="tagOpen"
               class="absolute z-50 mt-1 w-full rounded-lg border border-border bg-card shadow-lg max-h-48 overflow-y-auto"
             >
+              <div class="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/30">
+                <span class="text-xs text-muted-foreground">选择标签</span>
+                <button @mousedown.prevent="closeTagDropdown" class="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+                  <X class="w-3.5 h-3.5" />
+                </button>
+              </div>
               <div
                 v-for="t in suggestions.slice(0, 20)"
                 :key="t.tag"
-                @mousedown.prevent="addTag(t.tag)"
+                @mousedown.prevent="cancelTagBlur(); addTag(t.tag)"
                 class="flex items-center justify-between px-3 py-2 text-sm hover:bg-accent cursor-pointer transition-colors"
               >
                 <span>{{ t.tag }}</span>

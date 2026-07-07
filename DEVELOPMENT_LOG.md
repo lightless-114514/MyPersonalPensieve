@@ -1,5 +1,81 @@
 ﻿# MyPersonalPensieve - 开发日志
 
+## 2026-07-07 — 知识图谱界面全面改造 + 后端端口迁移至8000
+
+### 功能概述
+
+对知识图谱页面进行重大改造：实现节点颜色分类、丰富的交互操作、图例面板和工具栏；后端API添加nodeType字段和摘要节点；将后端端口从8080迁移至8000以避免与Steam等应用端口冲突。
+
+### 知识图谱节点颜色分类
+
+| 节点类型 | 颜色 | 含义 |
+|----------|------|------|
+| 摘要 (summary) | 蓝色 `#3b82f6` | 记忆节点，从记忆标题生成 |
+| 实体 (entity) | 绿色 `#22c55e` | PERSON, PLACE, ORG, TECHNOLOGY |
+| 概念 (concept) | 黄色 `#eab308` | TOPIC, EVENT |
+| 其他 (other) | 灰色 `#9ca3af` | OTHER |
+
+### 交互功能
+
+| 操作 | 效果 |
+|------|------|
+| 单击节点 | 打开右侧详情面板（摘要节点加载记忆内容） |
+| 双击节点 | 以该节点为中心聚焦（缩放+平移动画） |
+| Shift+单击 | 叠加该节点邻居到画布 |
+| 节点右上角 ⊕ 按钮 | 悬浮显示，点击展开邻居（同Shift+单击） |
+| 拖拽节点 | 手动调整节点位置 |
+| 拖拽空白区域 | 平移画布 |
+| 滚轮 | 缩放画布 |
+
+### UI控件
+
+- **图例小窗口**（左下角）：颜色含义 + 操作说明，可关闭/展开
+- **适应屏幕按钮**：一键缩放至全部节点可见
+- **隐藏/显示箭头**：切换连线箭头显示
+
+### 后端API改动
+
+- `GET /api/graph` 响应中每个节点新增 `nodeType` 字段（`summary`/`entity`/`concept`/`other`）
+- 新增记忆摘要节点（id格式 `memory_{id}`），与关联实体之间建立 `has_entity` 连线
+
+### 端口迁移 8080 → 8000
+
+Steam等应用占用8080端口导致后端无法正常响应，将全部相关配置迁移至8000。
+
+| 文件 | 改动 |
+|------|------|
+| `frontend/vite.config.ts` | proxy target → localhost:8000 |
+| `frontend/vite.config.js` | proxy target → localhost:8000 |
+| `frontend/.env.development` | 注释更新 |
+| `frontend/.env.production` | API地址 → 127.0.0.1:8000 |
+| `backend/app/config.py` | 默认端口 → 8000 |
+| `backend/Dockerfile` | EXPOSE + CMD → 8000 |
+| `backend/run.py` | 默认端口 → 8000 |
+| `backend/run_with_proxy.py` | uvicorn端口 → 8000 |
+| `backend/.env` / `.env.example` | SERVER_PORT=8000 |
+| `docker-compose.yml` | 端口映射 + SERVER_PORT |
+| `start_servers.bat` | uvicorn启动端口 |
+| `electron/main.js` | SERVER_PORT常量 |
+
+### 文件改动
+
+| 文件 | 改动类型 |
+|------|----------|
+| `frontend/src/pages/GraphPage.vue` | 全面重写：节点颜色、交互、图例、⊕按钮 |
+| `frontend/src/types/index.ts` | GraphNode接口添加nodeType字段 |
+| `backend/app/routes/analytics.py` | 添加nodeType映射、摘要节点、memory-entity连线 |
+| `frontend/vite.config.ts` / `.js` | proxy端口8000 |
+| `frontend/.env.development` / `.env.production` | 端口8000 |
+| `backend/app/config.py` | 默认端口8000 |
+| `backend/Dockerfile` | EXPOSE + CMD 8000 |
+| `backend/run.py` / `run_with_proxy.py` | 端口8000 |
+| `backend/.env` / `.env.example` | SERVER_PORT=8000 |
+| `docker-compose.yml` | 端口映射8000 |
+| `start_servers.bat` | uvicorn端口8000 |
+| `electron/main.js` | SERVER_PORT=8000 |
+
+---
+
 ## 2026-07-05 — 图片预览Bug修复 + 页面卡死Bug修复 + 标签下拉栏UX增强
 
 ### 功能概述

@@ -24,7 +24,7 @@ def _default_data_dir() -> str:
 class Settings(BaseSettings):
     # Application
     app_name: str = "pensieve-backend"
-    server_port: int = 8080
+    server_port: int = 8000
     server_host: str = "127.0.0.1"
     debug: bool = False
 

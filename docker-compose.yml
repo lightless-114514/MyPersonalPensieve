@@ -5,7 +5,7 @@ services:
     build: ./backend
     container_name: pensieve-backend
     ports:
-      - "8080:8080"
+      - "8000:8000"
     environment:
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
@@ -17,7 +17,7 @@ services:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6334
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - SERVER_PORT=8080
+      - SERVER_PORT=8000
       - UPLOAD_DIR=/app/uploads
     volumes:
       - uploads_data:/app/uploads

@@ -24,7 +24,7 @@ def main():
 
     # 读取环境变量配置（由 Electron 注入）
     host = os.environ.get("SERVER_HOST", "127.0.0.1")
-    port = int(os.environ.get("SERVER_PORT", "8080"))
+    port = int(os.environ.get("SERVER_PORT", "8000"))
 
     # 输出启动信号（Electron 据此判断后端已启动）
     print(f"PENSIEVE_STARTING host={host} port={port}", flush=True)

@@ -60,17 +60,63 @@ async def get_knowledge_graph(
         relations_result = await db.execute(select(Relation))
         relations = relations_result.scalars().all()
 
+    # --- Entity type → nodeType mapping ---
+    # entity: PERSON, PLACE, ORG, TECHNOLOGY
+    # concept: TOPIC, EVENT
+    # other: OTHER
+    ENTITY_TYPES = {"PERSON", "PLACE", "ORG", "TECHNOLOGY"}
+    CONCEPT_TYPES = {"TOPIC", "EVENT"}
+
     nodes = []
     seen = set()
     for e in entities:
         if e.name not in seen:
             seen.add(e.name)
+            raw_type = e.type.value if e.type else "OTHER"
+            if raw_type in ENTITY_TYPES:
+                node_type = "entity"
+            elif raw_type in CONCEPT_TYPES:
+                node_type = "concept"
+            else:
+                node_type = "other"
             group_map = {"PERSON": 1, "PLACE": 2, "ORG": 3, "EVENT": 4, "TOPIC": 5, "TECHNOLOGY": 6, "OTHER": 0}
             nodes.append({
                 "id": e.id,
                 "name": e.name,
-                "type": e.type.value if e.type else "OTHER",
-                "group": group_map.get(e.type.value if e.type else "OTHER", 0),
+                "type": raw_type,
+                "nodeType": node_type,
+                "group": group_map.get(raw_type, 0),
+            })
+
+    # --- Add memory nodes as "summary" type ---
+    mem_query = select(Memory)
+    if big_tag:
+        mem_query = mem_query.where(Memory.big_tag == bt)
+    mem_result = await db.execute(mem_query)
+    memories = mem_result.scalars().all()
+
+    # Build memory-entity links and summary nodes
+    summary_links = []
+    for m in memories:
+        mem_node_id = f"memory_{m.id}"
+        nodes.append({
+            "id": mem_node_id,
+            "name": m.title if m.title else f"记忆 {m.id[:8]}",
+            "type": "SUMMARY",
+            "nodeType": "summary",
+            "group": 7,
+        })
+        # Get entities linked to this memory
+        me_for_mem = await db.execute(
+            select(ME.entity_id).where(ME.memory_id == m.id)
+        )
+        ent_ids = [row[0] for row in me_for_mem.all()]
+        for eid in ent_ids:
+            summary_links.append({
+                "source": mem_node_id,
+                "target": eid,
+                "type": "has_entity",
+                "strength": 0.5,
             })
 
     links = []
@@ -81,6 +127,7 @@ async def get_knowledge_graph(
             "type": r.relation_type,
             "strength": 1.0,
         })
+    links.extend(summary_links)
 
     return {"nodes": nodes, "links": links}
 

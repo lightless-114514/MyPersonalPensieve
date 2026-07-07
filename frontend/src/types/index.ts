@@ -68,6 +68,7 @@ export interface GraphNode {
   id: string
   name: string
   type: string
+  nodeType: 'summary' | 'entity' | 'concept' | 'other'
   group: number
 }
 

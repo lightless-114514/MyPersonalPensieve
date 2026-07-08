@@ -38,6 +38,26 @@ const router = createRouter({
       name: 'settings',
       component: () => import('@/pages/SettingsPage.vue'),
     },
+    {
+      path: '/insight/weekly',
+      name: 'insight-weekly',
+      component: () => import('@/pages/InsightWeeklyPage.vue'),
+    },
+    {
+      path: '/insight/monthly',
+      name: 'insight-monthly',
+      component: () => import('@/pages/InsightMonthlyPage.vue'),
+    },
+    {
+      path: '/insight/archive',
+      name: 'insight-archive',
+      component: () => import('@/pages/InsightArchivePage.vue'),
+    },
+    {
+      path: '/insight/archive/:id',
+      name: 'insight-detail',
+      component: () => import('@/pages/InsightDetailPage.vue'),
+    },
   ],
 })
 

@@ -1,12 +1,12 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
 import { ref, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { getMemory, deleteMemory, updateMemory, toggleFavoriteMemory, getTags } from '@/api'
 import { formatDate, typeIcon, sentimentColor, sentimentBg, bigTagClass, bigTagLabel, BIG_TAG_OPTIONS } from '@/lib/utils'
-import type { BigTagCategory } from '@/types'
+import type { BigTagCategory, PrivacyStatus } from '@/types'
 import { useExperienceStore } from '@/stores/experience'
-import { ArrowLeft, Trash2, ExternalLink, Edit3, Save, X, Star } from 'lucide-vue-next'
+import { ArrowLeft, Trash2, ExternalLink, Edit3, Save, X, Star, Shield, Eye, Database, Lock } from 'lucide-vue-next'
 import FilePreview from '@/components/FilePreview.vue'
 
 const route = useRoute()
@@ -151,6 +151,27 @@ function toggleFavorite() {
   if (!memory.value) return
   favoriteMutation.mutate({ id: memory.value.id, favorite: !memory.value.favorite })
 }
+
+// ---- 隐私状态 ----
+const privacyOptions: { value: PrivacyStatus; label: string; icon: any; desc: string }[] = [
+  { value: 'ANALYZE', label: '可分析', icon: Eye, desc: '允许出现在洞察报告中' },
+  { value: 'STORE', label: '仅存储', icon: Database, desc: '保存但不出现在报告中' },
+  { value: 'LOCKED', label: '锁定', icon: Lock, desc: '加密存储，完全私密' },
+]
+
+const privacyMutation = useMutation({
+  mutationFn: async (status: PrivacyStatus) => {
+    return updateMemory(route.params.id as string, { privacy_status: status })
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['memory', route.params.id] })
+    queryClient.invalidateQueries({ queryKey: ['memories'] })
+  },
+})
+
+function setPrivacy(status: PrivacyStatus) {
+  privacyMutation.mutate(status)
+}
 </script>
 
 <template>
@@ -214,6 +235,32 @@ function toggleFavorite() {
           <span v-if="memory.sentiment" :class="['px-2 py-0.5 rounded-full text-xs font-medium', sentimentColor(memory.sentiment), sentimentBg(memory.sentiment)]">
             {{ memory.sentiment === 'POSITIVE' ? '积极' : memory.sentiment === 'NEGATIVE' ? '消极' : '中性' }}
           </span>
+        </div>
+
+        <!-- 隐私状态选择器 -->
+        <div class="flex items-center gap-2 mt-1">
+          <Shield class="w-3.5 h-3.5 text-muted-foreground" />
+          <div class="flex items-center gap-1.5">
+            <button
+              v-for="opt in privacyOptions"
+              :key="opt.value"
+              @click="setPrivacy(opt.value)"
+              :class="[
+                'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border transition-all duration-200',
+                memory.privacyStatus === opt.value
+                  ? opt.value === 'ANALYZE'
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                    : opt.value === 'STORE'
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30'
+                  : 'border-border text-muted-foreground hover:bg-accent'
+              ]"
+              :title="opt.desc"
+            >
+              <component :is="opt.icon" class="w-3 h-3" />
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
       </div>
 

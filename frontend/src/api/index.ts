@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -11,6 +11,10 @@ import type {
   WordCloudItem,
   StatsSummary,
   CompareResult,
+  InsightReport,
+  InsightReportListItem,
+  WeeklyStatus,
+  InsightArchive,
 } from '@/types'
 
 function snakeToCamel(str: string): string {
@@ -175,4 +179,57 @@ export function subscribeProgress(
     es.close()
   }
   return es
+}
+
+// ---- Insight / Self-Insight APIs ----
+
+export async function getWeeklyStatus(weekStart: string) {
+  const { data } = await api.get<WeeklyStatus>('/insight/weekly/status', {
+    params: { weekStart },
+  })
+  return data
+}
+
+export async function getWeeklyReport(weekStart: string) {
+  const { data } = await api.get<InsightReport>('/insight/weekly', {
+    params: { weekStart },
+  })
+  return data
+}
+
+export async function getMonthlyReport(monthStart: string) {
+  const { data } = await api.get<InsightReport>('/insight/monthly', {
+    params: { monthStart },
+  })
+  return data
+}
+
+export async function getInsightArchive(page: number = 0, size: number = 20) {
+  const { data } = await api.get<InsightArchive>('/insight/archive', {
+    params: { page, size },
+  })
+  return data
+}
+
+export async function getInsightReportDetail(reportId: string) {
+  const { data } = await api.get<InsightReport>(`/insight/archive/${reportId}`)
+  return data
+}
+
+export async function generateWeeklyReport(weekStart: string) {
+  const { data } = await api.post<InsightReport>('/insight/generate/weekly', {
+    week_start: weekStart,
+  }, { timeout: 120000 })
+  return data
+}
+
+export async function generateMonthlyReport(monthStart: string) {
+  const { data } = await api.post<InsightReport>('/insight/generate/monthly', {
+    month_start: monthStart,
+  }, { timeout: 300000 })
+  return data
+}
+
+export async function deleteInsightReport(reportId: string) {
+  await api.delete(`/insight/archive/${reportId}`)
 }

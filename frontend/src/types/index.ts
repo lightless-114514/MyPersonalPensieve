@@ -23,6 +23,7 @@
   processingStatus?: string
   bigTag?: BigTagCategory | null
   favorite?: boolean
+  privacyStatus?: PrivacyStatus
   createdAt?: string
   updatedAt?: string
   entities?: Entity[]
@@ -133,4 +134,65 @@ export interface CompareResult {
   sourceTags: string[]
   targetTags: string[]
   growthInsight: string | null
+}
+
+// ---- Insight / Self-Insight feature ----
+
+export type PrivacyStatus = 'ANALYZE' | 'STORE' | 'LOCKED'
+export type InsightType = 'WEEKLY' | 'MONTHLY'
+
+export interface InsightReport {
+  id: string
+  reportType: InsightType
+  dateStart: string
+  dateEnd: string
+  summary: string
+  emotionCurve: string       // JSON string
+  keywords: string           // JSON string
+  lowPoint: string           // JSON string
+  highPoint: string          // JSON string
+  pattern: string            // 月报专用
+  coreTheme: string          // 月报专用
+  memoryCount: number
+  isRead: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InsightReportListItem {
+  id: string
+  reportType: InsightType
+  dateStart: string
+  dateEnd: string
+  summary: string
+  memoryCount: number
+  isRead: boolean
+  createdAt: string
+}
+
+export interface WeeklyStatus {
+  weekStart: string
+  exists: boolean
+  reportId: string | null
+  hasNewMemories: boolean
+}
+
+export interface InsightArchive {
+  total: number
+  items: InsightReportListItem[]
+}
+
+export interface EmotionCurvePoint {
+  date?: string
+  weekStart?: string
+  score: number
+  avgScore?: number
+}
+
+export interface KeywordPoint {
+  date?: string
+  title?: string
+  preview?: string
+  titlesSummary?: string
+  weekStart?: string
 }

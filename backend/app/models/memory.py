@@ -1,7 +1,7 @@
 ﻿import uuid
 from datetime import datetime
 from sqlalchemy import (
-    String, Text, Float, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum, Boolean
+    String, Text, Float, Integer, DateTime, ForeignKey, UniqueConstraint, Enum as SAEnum, Boolean
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 
@@ -46,6 +46,19 @@ class BigTag(str, enum.Enum):
     DECISION_DILEMMA = "DECISION_DILEMMA"   # 决策纠结
 
 
+class PrivacyStatus(str, enum.Enum):
+    """日记隐私状态：纳入分析 / 仅存储 / 加密锁定"""
+    ANALYZE = "ANALYZE"      # 纳入分析（默认）
+    STORE = "STORE"          # 仅存储，AI 不可见
+    LOCKED = "LOCKED"        # 加密锁定，需密码查看
+
+
+class InsightType(str, enum.Enum):
+    """洞察报告类型"""
+    WEEKLY = "WEEKLY"
+    MONTHLY = "MONTHLY"
+
+
 class Memory(Base):
     __tablename__ = "memories"
 
@@ -63,6 +76,9 @@ class Memory(Base):
         SAEnum(ProcessingStatus), nullable=False, default=ProcessingStatus.PENDING
     )
     big_tag: Mapped[BigTag | None] = mapped_column(SAEnum(BigTag), nullable=True)
+    privacy_status: Mapped[PrivacyStatus] = mapped_column(
+        SAEnum(PrivacyStatus), nullable=False, default=PrivacyStatus.ANALYZE
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
@@ -117,3 +133,29 @@ class Relation(Base):
     source_entity: Mapped["KnowledgeEntity"] = relationship("KnowledgeEntity", foreign_keys=[source_entity_id])
     target_entity: Mapped["KnowledgeEntity"] = relationship("KnowledgeEntity", foreign_keys=[target_entity_id])
     memory: Mapped["Memory | None"] = relationship("Memory")
+
+
+class InsightReport(Base):
+    """洞察报告：周报 / 月报"""
+    __tablename__ = "insight_reports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    report_type: Mapped[InsightType] = mapped_column(SAEnum(InsightType), nullable=False)
+    # 覆盖的日期范围
+    date_start: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD
+    date_end: Mapped[str] = mapped_column(String(10), nullable=False)    # YYYY-MM-DD
+    # 报告内容（JSON 字符串）
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")         # 一句话总结
+    emotion_curve: Mapped[str] = mapped_column(Text, nullable=False, default="")   # 情绪曲线数据 JSON
+    keywords: Mapped[str] = mapped_column(Text, nullable=False, default="")        # 高频关键词 JSON
+    low_point: Mapped[str] = mapped_column(Text, nullable=False, default="")       # 情绪低点摘要 JSON
+    high_point: Mapped[str] = mapped_column(Text, nullable=False, default="")      # 情绪高点摘要 JSON
+    pattern: Mapped[str] = mapped_column(Text, nullable=False, default="")         # 显著模式（月报专用）
+    core_theme: Mapped[str] = mapped_column(Text, nullable=False, default="")      # 核心主题（月报专用）
+    # 元数据
+    memory_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 分析的日记数
+    is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)   # 是否已读
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now, onupdate=datetime.now
+    )

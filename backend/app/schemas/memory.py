@@ -14,6 +14,7 @@ class MemoryRequest(BaseModel):
     file_path: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
+    privacy_status: Optional[str] = "ANALYZE"
 
 
 class UpdateMemoryRequest(BaseModel):
@@ -28,6 +29,7 @@ class UpdateMemoryRequest(BaseModel):
     file_path: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
+    privacy_status: Optional[str] = None
 
 
 class MemoryResponse(BaseModel):
@@ -45,6 +47,7 @@ class MemoryResponse(BaseModel):
     tags: list[str] = Field(default_factory=list)
     big_tag: Optional[str] = None
     favorite: bool = False
+    privacy_status: str = "ANALYZE"
     created_at: datetime
     updated_at: datetime
 

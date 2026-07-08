@@ -2,7 +2,7 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 from app.db.session import Base
-from app.models.memory import Memory, MemoryTag, KnowledgeEntity, MemoryEntity, Relation
+from app.models.memory import Memory, MemoryTag, KnowledgeEntity, MemoryEntity, Relation, InsightReport
 from app.config import settings
 
 config = context.config

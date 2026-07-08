@@ -25,6 +25,6 @@ async def get_db() -> AsyncSession:
 
 async def init_db() -> None:
     """创建所有表（桌面端首次启动时调用，替代 alembic migrate）。"""
-    from app.models.memory import Memory, MemoryTag, KnowledgeEntity, MemoryEntity, Relation  # noqa: F401
+    from app.models.memory import Memory, MemoryTag, KnowledgeEntity, MemoryEntity, Relation, InsightReport  # noqa: F401
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

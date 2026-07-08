@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.db.session import async_session_factory
 from app.models.memory import (
     Memory, MemoryTag, MemoryType, Sentiment, EntityType, BigTag,
-    KnowledgeEntity, MemoryEntity, Relation,
+    KnowledgeEntity, MemoryEntity, Relation, PrivacyStatus,
 )
 from app.schemas.memory import MemoryRequest, UpdateMemoryRequest, MemoryResponse, PagedResponse
 from app.services.redis_service import redis_service
@@ -38,6 +38,12 @@ class MemoryService:
             big_tag=big_tag,
             favorite=request.favorite,
         )
+        # Handle privacy_status
+        if request.privacy_status:
+            try:
+                memory.privacy_status = PrivacyStatus(request.privacy_status.upper())
+            except ValueError:
+                pass
         db.add(memory)
         await db.flush()
 
@@ -75,6 +81,7 @@ class MemoryService:
             tags=tag_names,
             big_tag=memory.big_tag.value if memory.big_tag else None,
             favorite=memory.favorite,
+            privacy_status=memory.privacy_status.value if memory.privacy_status else "ANALYZE",
             created_at=memory.created_at,
             updated_at=memory.updated_at,
         )
@@ -240,6 +247,12 @@ class MemoryService:
         if request.mime_type is not None:
             memory.mime_type = request.mime_type
 
+        if request.privacy_status is not None:
+            try:
+                memory.privacy_status = PrivacyStatus(request.privacy_status.upper())
+            except ValueError:
+                pass
+
         if request.big_tag is not None:
             if request.big_tag == "":
                 memory.big_tag = None
@@ -310,6 +323,7 @@ class MemoryService:
             tags=[t.tag for t in m.tags] if m.tags else [],
             big_tag=m.big_tag.value if m.big_tag else None,
             favorite=m.favorite,
+            privacy_status=m.privacy_status.value if m.privacy_status else "ANALYZE",
             created_at=m.created_at,
             updated_at=m.updated_at,
         )

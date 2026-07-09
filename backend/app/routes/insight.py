@@ -32,7 +32,7 @@ async def get_weekly_report(
     """获取指定周的周报数据"""
     report = await insight_service.get_weekly_report(db, weekStart)
     if not report:
-        raise HTTPException(status_code=404, detail="该周暂无周报")
+        return None
     return _report_to_response(report)
 
 
@@ -44,7 +44,7 @@ async def get_monthly_report(
     """获取指定月的月报数据"""
     report = await insight_service.get_monthly_report(db, monthStart)
     if not report:
-        raise HTTPException(status_code=404, detail="该月暂无月报")
+        return None
     return _report_to_response(report)
 
 

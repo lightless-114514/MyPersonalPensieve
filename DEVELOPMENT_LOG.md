@@ -1,6 +1,119 @@
 ﻿# MyPersonalPensieve - 开发日志
 
-## 2026-07-07 — 知识图谱界面全面改造 + 后端端口迁移至8000
+## 2026-07-10 — 自我洞察功能（周报/月报/档案）+ 隐私控制
+
+### 功能概述
+
+新增AI驱动的自我洞察功能，支持生成周报和月报，提供情绪曲线、关键词、高低点分析等维度；洞察档案页面管理历史报告；日记隐私控制（可分析/仅存储/锁定）确保敏感内容不被AI分析。
+
+### 后端模型新增
+
+| 模型/枚举 | 说明 |
+|-----------|------|
+| `InsightReport` | 洞察报告表：report_type(WEEKLY/MONTHLY)、日期范围、summary、emotion_curve(JSON)、keywords(JSON)、low_point(JSON)、high_point(JSON)、pattern(月报)、core_theme(月报)、memory_count、is_read |
+| `InsightType` | 枚举：WEEKLY / MONTHLY |
+| `PrivacyStatus` | 枚举：ANALYZE(纳入分析) / STORE(仅存储) / LOCKED(加密锁定) |
+| `Memory.privacy_status` | 新增字段，默认 ANALYZE，控制日记是否参与洞察分析 |
+
+### 后端API（8个新端点）
+
+| 端点 | 说明 |
+|------|------|
+| `GET /api/insight/weekly/status?weekStart=` | 查询指定周是否已生成周报，返回exists/hasNewMemories |
+| `GET /api/insight/weekly?weekStart=` | 获取指定周的周报数据 |
+| `GET /api/insight/monthly?monthStart=` | 获取指定月的月报数据（最新一份） |
+| `GET /api/insight/archive?page=&size=` | 洞察档案列表（分页） |
+| `GET /api/insight/archive/{id}` | 档案详情（自动标记已读） |
+| `POST /api/insight/generate/weekly` | 生成周报（已存在则覆盖更新） |
+| `POST /api/insight/generate/monthly` | 生成月报（允许重复生成，每次新建记录） |
+| `DELETE /api/insight/archive/{id}` | 删除洞察报告 |
+
+### 周报生成逻辑
+
+1. 获取指定周内 `privacy_status=ANALYZE` 的日记
+2. 提取每篇日记的日期、标题、内容预览(200字)、情绪值
+3. 调用LLM生成JSON：summary、emotion_curve(每日数据点)、keywords(TOP5)、low_point、high_point
+4. 已存在周报则覆盖更新，不存在则新建
+
+### 月报生成逻辑（两步法优化Token）
+
+1. 获取指定月内 `privacy_status=ANALYZE` 的日记
+2. **第一步**：按周分组，压缩为周代表摘要（日期范围、日记数、平均情绪、标题摘要）
+3. **第二步**：调用LLM生成月报JSON：summary、emotion_curve(每周数据点)、keywords(TOP10)、low_point、high_point、pattern(显著模式)、core_theme(核心主题)
+4. 每次生成创建新记录，不覆盖
+
+### 隐私控制
+
+| 状态 | 图标 | 含义 | 洞察行为 |
+|------|------|------|----------|
+| ANALYZE | Eye | 可分析 | 出现在周报/月报中 |
+| STORE | Database | 仅存储 | 保存但AI不可见 |
+| LOCKED | Lock | 锁定 | 加密存储，完全私密 |
+
+- MemoryDetailPage 编辑区域新增隐私状态切换按钮
+- `updateMemory` API 支持 `privacy_status` 字段更新
+- 洞察生成时仅查询 `privacy_status=ANALYZE` 的日记
+
+### 前端页面（4个新页面）
+
+| 页面 | 路由 | 说明 |
+|------|------|------|
+| `InsightWeeklyPage.vue` | `/insight/weekly` | 周报页面：周选择器、生成按钮、情绪曲线图、关键词、高低点卡片 |
+| `InsightMonthlyPage.vue` | `/insight/monthly` | 月报页面：月选择器、生成按钮、情绪曲线(按周)、关键词、模式/主题卡片 |
+| `InsightArchivePage.vue` | `/insight/archive` | 档案列表：周报/月报卡片、分页、删除、点击查看详情 |
+| `InsightDetailPage.vue` | `/insight/archive/:id` | 报告详情：完整展示单份洞察报告所有字段 |
+
+### 侧边栏改动
+
+- 新增"自我洞察"折叠菜单（Sparkles图标），含三个二级入口：
+  - **周报**：蓝色小圆点提示（有新日记未生成周报）、已生成标记、生成中旋转动画
+  - **月报**：绿色小圆点提示（每月1-7日显示）
+  - **洞察档案**：红色小圆点提示（有未读报告）
+- onMounted时自动检测周报状态和月报提示
+
+### 前端状态管理
+
+- `stores/insight.ts`：Pinia store，管理currentReport、archiveItems、weeklyStatus、生成状态、侧边栏提示状态
+- API超时：周报生成120s、月报生成300s（Token消耗大）
+
+### 数据库迁移
+
+| 迁移文件 | 说明 |
+|----------|------|
+| `ef300e1cd3c9_add_privacy_status_to_memory.py` | memories表新增privacy_status列(ANALYZE/STORE/LOCKED)，默认ANALYZE |
+
+### Bug修复
+
+| Bug | 修复 |
+|-----|------|
+| 洞察API对不存在的周报/月报返回404导致前端报错 | 改为返回200 + null，前端优雅处理 |
+
+### 文件改动
+
+| 文件 | 改动类型 |
+|------|----------|
+| `backend/app/models/memory.py` | 新增InsightReport模型、InsightType枚举、PrivacyStatus枚举、Memory添加privacy_status字段 |
+| `backend/app/routes/insight.py` | 新增：8个洞察API端点 |
+| `backend/app/schemas/insight.py` | 新增：请求/响应Schema |
+| `backend/app/services/insight_service.py` | 新增：洞察生成服务（周报/月报/档案/LLM调用/JSON解析） |
+| `backend/app/main.py` | 注册insight路由 |
+| `backend/app/schemas/memory.py` | 添加privacy_status字段 |
+| `backend/app/services/memory_service.py` | update()支持privacy_status |
+| `backend/alembic/versions/ef300e1cd3c9_...py` | 新增：privacy_status迁移 |
+| `frontend/src/pages/InsightWeeklyPage.vue` | 新建：周报页面 |
+| `frontend/src/pages/InsightMonthlyPage.vue` | 新建：月报页面 |
+| `frontend/src/pages/InsightArchivePage.vue` | 新建：洞察档案页面 |
+| `frontend/src/pages/InsightDetailPage.vue` | 新建：报告详情页面 |
+| `frontend/src/stores/insight.ts` | 新建：洞察Pinia store |
+| `frontend/src/api/index.ts` | 新增7个洞察API函数 |
+| `frontend/src/types/index.ts` | 新增InsightReport/InsightReportListItem/WeeklyStatus/InsightArchive/EmotionCurvePoint/KeywordPoint/PrivacyStatus类型 |
+| `frontend/src/router/index.ts` | 新增4条洞察路由 |
+| `frontend/src/components/Sidebar.vue` | 新增自我洞察折叠菜单+提示圆点 |
+| `frontend/src/pages/MemoryDetailPage.vue` | 新增隐私状态切换UI |
+
+---
+
+## 2026-07-07 — 知识图谱界面全面改造 + 后端端口迁移至8000 + 后端端口迁移至8000
 
 ### 功能概述
 

@@ -204,7 +204,7 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto space-y-6">
+  <div class="max-w-5xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold tracking-tight font-display">记忆</h1>
       <div class="flex items-center gap-2">

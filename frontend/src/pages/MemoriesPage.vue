@@ -348,7 +348,8 @@ const totalPages = computed(() => data.value?.total_pages ?? 1)
         v-for="(m, index) in data?.content"
         :key="m.id"
         :to="`/memories/${m.id}`"
-        class="block p-4 rounded-xl border border-border bg-card hover:bg-accent/50 transition-all duration-200 relative group shadow-card hover:shadow-card-hover"
+        class="block rounded-xl border border-border bg-card hover:bg-accent/50 transition-all duration-200 relative group shadow-card hover:shadow-card-hover"
+        :class="m.bigTag ? 'p-4 pt-10' : 'p-4'"
         :style="{ animationDelay: `${index * 30}ms` }"
       >
         <!-- Big tag badge (top-right corner) -->

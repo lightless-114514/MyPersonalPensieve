@@ -600,31 +600,7 @@ function renderTree() {
     .attr('opacity', (d: any) => d.data.id === '__virtual__' ? 0 : 1)
     .style('pointer-events', 'none')
 
-  // ─── ⊕ expand button on tree node top-right ───────────────
-  const treeNodeRadius = (d: any) => d.data.id === '__virtual__' ? 0 : (d.depth === 1 ? 10 : 6)
-  node.append('circle')
-    .attr('class', 'expand-btn')
-    .attr('cx', (d: any) => treeNodeRadius(d) * 0.7)
-    .attr('cy', (d: any) => -treeNodeRadius(d) * 0.7)
-    .attr('r', (d: any) => d.data.id === '__virtual__' ? 0 : 7)
-    .attr('fill', 'hsl(var(--primary))')
-    .attr('stroke', 'hsl(var(--background))')
-    .attr('stroke-width', 1.5)
-    .attr('opacity', 0)
-    .style('cursor', 'pointer')
-    .style('pointer-events', 'all')
 
-  node.append('text')
-    .attr('class', 'expand-btn-text')
-    .attr('x', (d: any) => treeNodeRadius(d) * 0.7)
-    .attr('y', (d: any) => -treeNodeRadius(d) * 0.7 + 4)
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '10px')
-    .attr('font-weight', 'bold')
-    .attr('fill', 'hsl(var(--primary-foreground))')
-    .attr('opacity', 0)
-    .style('pointer-events', 'none')
-    .text('+')
 
   // Click handlers for tree
   let clickTimer: number | null = null
@@ -665,24 +641,14 @@ function renderTree() {
     .on('mouseenter', function(event: MouseEvent, d: any) {
       if (d.data.id !== '__virtual__') {
         showTooltip(event, d.data.name, d.data.id, d.data.nodeType)
-        d3.select(this).selectAll('.expand-btn').attr('opacity', 1)
-        d3.select(this).selectAll('.expand-btn-text').attr('opacity', 1)
       }
     })
     .on('mousemove', function(event: MouseEvent) { moveTooltip(event) })
     .on('mouseleave', function() {
       hideTooltip()
-      d3.select(this).selectAll('.expand-btn').attr('opacity', 0)
-      d3.select(this).selectAll('.expand-btn-text').attr('opacity', 0)
     })
 
-  // ─── ⊕ button click for tree ──────────────────────────────
-  node.selectAll('.expand-btn')
-    .on('click', (event: MouseEvent, d: any) => {
-      if (d.data.id === '__virtual__') return
-      event.stopPropagation()
-      addNeighborsToCanvas(d.data)
-    })
+
 
   // Auto-fit
   const visible = root.descendants().filter((d: any) => d.data.id !== '__virtual__')
@@ -869,8 +835,8 @@ watch(showArrows, () => {
         <div class="border-t border-border pt-2 mt-1 space-y-1 text-muted-foreground">
           <div>单击 → 查看详情</div>
           <div>双击 → 聚焦节点</div>
-          <div>Shift+单击 → 展开邻居</div>
-          <div>节点 ⊕ → 展开邻居</div>
+          <div v-if="layoutMode === 'force'">Shift+单击 → 展开邻居</div>
+          <div v-if="layoutMode === 'force'">节点 ⊕ → 展开邻居</div>
           <div>拖拽节点 → 调整位置</div>
           <div>拖拽空白 → 平移画布</div>
           <div>滚轮 → 缩放画布</div>

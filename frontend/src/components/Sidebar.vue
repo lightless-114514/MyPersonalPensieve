@@ -197,7 +197,7 @@ function isActive(path: string) {
           v-if="birthdayStore.isBirthdayToday"
           class="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-pink-500/15 text-pink-500 animate-pulse"
         >
-          🎂 今天你最大
+          🎂 {{ birthdayStore.badgeText }}
         </span>
       </div>
 

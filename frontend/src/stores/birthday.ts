@@ -130,6 +130,10 @@ export const useBirthdayStore = defineStore('birthday', () => {
     return BIRTHDAY_GREETINGS[idx]
   })
 
+  /** 生日徽章随机文案（每次页面加载随机选取，会话内固定） */
+  const BADGE_TEXTS = ['今天你最大', '生日快乐！', '任性一天'] as const
+  const badgeText = ref(BADGE_TEXTS[Math.floor(Math.random() * BADGE_TEXTS.length)])
+
   // ---- 动作 ----
 
   /** 从 localStorage 加载数据 */
@@ -273,6 +277,7 @@ export const useBirthdayStore = defineStore('birthday', () => {
     shouldShowAiWishCard,
     shouldShowReminderBar,
     randomGreeting,
+    badgeText,
     // 动作
     load,
     save,

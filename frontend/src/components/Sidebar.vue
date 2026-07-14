@@ -3,6 +3,7 @@ import { useRoute } from 'vue-router'
 import { useSettingsStore } from '@/stores/settings'
 import { useExperienceStore } from '@/stores/experience'
 import { useInsightStore } from '@/stores/insight'
+import { useBirthdayStore } from '@/stores/birthday'
 import { onMounted, ref } from 'vue'
 import {
   Brain,
@@ -29,11 +30,13 @@ const route = useRoute()
 const settings = useSettingsStore()
 const exp = useExperienceStore()
 const insight = useInsightStore()
+const birthdayStore = useBirthdayStore()
 
 const insightExpanded = ref(true)
 
 onMounted(() => {
   exp.load()
+  birthdayStore.load()
   // 检查周报/月报提示
   const now = new Date()
   const dayOfWeek = now.getDay() // 0=Sunday
@@ -189,6 +192,13 @@ function isActive(path: string) {
       <div class="flex items-center gap-1.5 mb-1.5">
         <span class="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase inline-flex items-center gap-1"><Zap class="w-3 h-3" />经验系统</span>
         <span class="text-[10px] text-muted-foreground/50">记录即成长</span>
+        <!-- 生日徽章 -->
+        <span
+          v-if="birthdayStore.isBirthdayToday"
+          class="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-pink-500/15 text-pink-500 animate-pulse"
+        >
+          🎂 今天你最大
+        </span>
       </div>
 
       <!-- 阶级文字 + 星级 + 重生按钮 -->

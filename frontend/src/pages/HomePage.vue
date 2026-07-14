@@ -5,13 +5,19 @@ import { getRecentMemories, getHeatmap, getWordCloud, getStats } from '@/api'
 import { formatDate, typeIcon, bigTagClass, bigTagLabel } from '@/lib/utils'
 import { Brain, ArrowRight, Activity, Tag } from 'lucide-vue-next'
 import { useGreeting } from '@/composables/useGreeting'
+import { useBirthdayStore } from '@/stores/birthday'
 import HeatmapChart from '@/components/HeatmapChart.vue'
 import WordCloudChart from '@/components/WordCloudChart.vue'
 import StatsCards from '@/components/StatsCards.vue'
+import BirthdayWishCard from '@/components/BirthdayWishCard.vue'
+import BirthdayMemoryReview from '@/components/BirthdayMemoryReview.vue'
+import BirthdayWish from '@/components/BirthdayWish.vue'
+import BirthdayReminder from '@/components/BirthdayReminder.vue'
 import { useRouter } from 'vue-router'
 import { getFilePreviewUrl } from '@/api'
 
 const router = useRouter()
+const birthdayStore = useBirthdayStore()
 
 const { data: memories, isLoading } = useQuery({
   queryKey: ['recent-memories'],
@@ -61,6 +67,19 @@ function handleWordClick(word: string) {
         {{ hasMemories ? '记录新的记忆' : '记录第一条记忆' }}
         <ArrowRight class="w-4 h-4" />
       </router-link>
+    </div>
+
+    <!-- 生日提醒条 -->
+    <BirthdayReminder />
+
+    <!-- 生日专属区域 -->
+    <div v-if="birthdayStore.isBirthdayToday" class="space-y-4 animate-fade-in">
+      <!-- AI祝福卡 -->
+      <BirthdayWishCard v-if="birthdayStore.showAiWish" />
+      <!-- 记忆回顾 -->
+      <BirthdayMemoryReview v-if="birthdayStore.showMemoryReview" />
+      <!-- 愿望清单 -->
+      <BirthdayWish />
     </div>
 
     <!-- Stats Cards -->

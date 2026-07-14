@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { useSettingsStore } from '@/stores/settings'
 import { useExperienceStore } from '@/stores/experience'
+import { useBirthdayStore } from '@/stores/birthday'
 import { ref, computed, onMounted } from 'vue'
-import { Save, RotateCcw, Check } from 'lucide-vue-next'
+import { Save, RotateCcw, Check, Cake, Trash2 } from 'lucide-vue-next'
 import { DEFAULT_TIER_NAMES } from '@/types/experience'
 import type { TierName } from '@/types/experience'
 
 const settings = useSettingsStore()
 const exp = useExperienceStore()
+const birthdayStore = useBirthdayStore()
 const saved = ref(false)
 
 // 自定义头衔编辑
@@ -15,6 +17,7 @@ const tierInputs = ref<string[]>([...DEFAULT_TIER_NAMES])
 
 onMounted(() => {
   exp.load()
+  birthdayStore.load()
   syncTierInputs()
 })
 
@@ -104,6 +107,149 @@ function saveSettings() {
           <option value="zh">中文</option>
           <option value="en">English</option>
         </select>
+      </section>
+
+      <!-- 生日设置 -->
+      <section class="p-6 rounded-xl border border-border bg-card space-y-4 shadow-card">
+        <div class="flex items-center gap-2">
+          <Cake class="w-5 h-5 text-primary" />
+          <h2 class="font-semibold font-display">生日</h2>
+        </div>
+        <p class="text-xs text-muted-foreground">
+          生日信息仅保存在本地，不会上传到服务器
+        </p>
+
+        <!-- 日期选择 -->
+        <div class="space-y-2">
+          <p class="text-sm font-medium">生日日期</p>
+          <div class="flex items-center gap-3">
+            <input
+              type="date"
+              :value="birthdayStore.birthday"
+              @change="birthdayStore.setBirthday(($event.target as HTMLInputElement).value); birthdayStore.save()"
+              class="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <button
+              v-if="birthdayStore.hasBirthday"
+              @click="birthdayStore.clearBirthday()"
+              class="p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="清除生日"
+            >
+              <Trash2 class="w-4 h-4" />
+            </button>
+          </div>
+          <p v-if="birthdayStore.hasBirthday" class="text-xs text-muted-foreground">
+            {{ birthdayStore.birthdayDisplayText }}
+            <span v-if="birthdayStore.age"> · {{ birthdayStore.age }}岁</span>
+            <span v-if="birthdayStore.isBirthdayToday" class="text-pink-500 font-medium"> · 今天是你的生日！🎂</span>
+            <span v-else-if="birthdayStore.daysUntilBirthday > 0 && birthdayStore.daysUntilBirthday <= 30">
+              · 还有{{ birthdayStore.daysUntilBirthday }}天
+            </span>
+          </p>
+        </div>
+
+        <!-- 功能开关 -->
+        <div class="space-y-3 pt-2">
+          <p class="text-sm font-medium">生日功能</p>
+
+          <!-- 隐藏年份 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">隐藏年份</p>
+              <p class="text-xs text-muted-foreground">不记录出生年份，仅显示月日</p>
+            </div>
+            <button
+              @click="birthdayStore.hideYear = !birthdayStore.hideYear; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.hideYear ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.hideYear ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+
+          <!-- 生日前提醒 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">生日前提醒</p>
+              <p class="text-xs text-muted-foreground">生日前3天显示提醒条</p>
+            </div>
+            <button
+              @click="birthdayStore.remindBefore = !birthdayStore.remindBefore; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.remindBefore ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.remindBefore ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+
+          <!-- 祝福弹窗 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">祝福弹窗</p>
+              <p class="text-xs text-muted-foreground">生日当天首次打开时显示祝福</p>
+            </div>
+            <button
+              @click="birthdayStore.showGreetingModal = !birthdayStore.showGreetingModal; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.showGreetingModal ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.showGreetingModal ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+
+          <!-- 粒子特效 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">粒子特效</p>
+              <p class="text-xs text-muted-foreground">生日当天显示飘落动画</p>
+            </div>
+            <button
+              @click="birthdayStore.showEffects = !birthdayStore.showEffects; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.showEffects ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.showEffects ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+
+          <!-- 双倍经验 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">双倍经验</p>
+              <p class="text-xs text-muted-foreground">生日当天获得双倍EXP</p>
+            </div>
+            <button
+              @click="birthdayStore.doubleExp = !birthdayStore.doubleExp; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.doubleExp ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.doubleExp ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+
+          <!-- AI祝福 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">AI专属祝福</p>
+              <p class="text-xs text-muted-foreground">基于你的记忆生成个性化祝福</p>
+            </div>
+            <button
+              @click="birthdayStore.showAiWish = !birthdayStore.showAiWish; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.showAiWish ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.showAiWish ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+
+          <!-- 记忆回顾 -->
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">记忆回顾</p>
+              <p class="text-xs text-muted-foreground">展示去年今日的记忆</p>
+            </div>
+            <button
+              @click="birthdayStore.showMemoryReview = !birthdayStore.showMemoryReview; birthdayStore.save()"
+              :class="['relative w-11 h-6 rounded-full overflow-hidden transition-colors duration-200', birthdayStore.showMemoryReview ? 'bg-primary' : 'bg-border']"
+            >
+              <span :class="['absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200', birthdayStore.showMemoryReview ? 'translate-x-[22px]' : 'translate-x-0.5']"></span>
+            </button>
+          </div>
+        </div>
       </section>
 
       <!-- 经验系统 -->

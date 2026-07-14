@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -232,4 +232,16 @@ export async function generateMonthlyReport(monthStart: string) {
 
 export async function deleteInsightReport(reportId: string) {
   await api.delete(`/insight/archive/${reportId}`)
+}
+
+// ---- Birthday APIs ----
+
+export interface BirthdayWishResponse {
+  wish: string
+  fallback: boolean
+}
+
+export async function generateBirthdayWish() {
+  const { data } = await api.post<BirthdayWishResponse>('/birthday/wish', {}, { timeout: 30000 })
+  return data
 }

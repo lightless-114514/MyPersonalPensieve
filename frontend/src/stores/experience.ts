@@ -11,6 +11,7 @@ import {
   MAX_EXP,
 } from '@/types/experience'
 import type { ExperienceData, TierName } from '@/types/experience'
+import { useBirthdayStore } from '@/stores/birthday'
 
 /** 飘字项 */
 export interface FloatingText {
@@ -113,9 +114,12 @@ export const useExperienceStore = defineStore('experience', () => {
 
   /** 增加经验值（立即写入，用于提交奖励等非防抖场景） */
   function addExpImmediate(amount: number) {
-    totalExp.value = Math.round((totalExp.value + amount) * 10) / 10
+    const birthdayStore = useBirthdayStore()
+    const isDouble = birthdayStore.isBirthdayToday && birthdayStore.doubleExp
+    const finalAmount = isDouble ? amount * 2 : amount
+    totalExp.value = Math.round((totalExp.value + finalAmount) * 10) / 10
     persist()
-    spawnFloating(amount)
+    spawnFloating(finalAmount, isDouble)
   }
 
   /** 输入事件奖励：防抖 2 秒后结算 */
@@ -174,13 +178,26 @@ export const useExperienceStore = defineStore('experience', () => {
   }
 
   /** 弹出飘字 */
-  function spawnFloating(amount: number) {
+  function spawnFloating(amount: number, isBirthdayDouble: boolean = false) {
     const id = ++floatingId
+    const text = isBirthdayDouble ? `🎂 +${amount} EXP 双倍!` : `+${amount} EXP`
     floatingTexts.value.push({
       id,
-      text: `+${amount} EXP`,
+      text,
       amount,
     })
+    // 生日双倍时额外添加一个金色飘字
+    if (isBirthdayDouble) {
+      const goldId = ++floatingId
+      floatingTexts.value.push({
+        id: goldId,
+        text: '🎉 生日快乐!',
+        amount: 0,
+      })
+      setTimeout(() => {
+        floatingTexts.value = floatingTexts.value.filter((f) => f.id !== goldId)
+      }, 1500)
+    }
     setTimeout(() => {
       floatingTexts.value = floatingTexts.value.filter((f) => f.id !== id)
     }, 1500)

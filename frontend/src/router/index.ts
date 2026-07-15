@@ -58,6 +58,16 @@ const router = createRouter({
       name: 'insight-detail',
       component: () => import('@/pages/InsightDetailPage.vue'),
     },
+    {
+      path: '/capsules',
+      name: 'capsules',
+      component: () => import('@/pages/CapsulePage.vue'),
+    },
+    {
+      path: '/capsules/:id',
+      name: 'capsule-detail',
+      component: () => import('@/pages/CapsuleDetailPage.vue'),
+    },
   ],
 })
 

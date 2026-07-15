@@ -24,6 +24,7 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  Hourglass,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -51,6 +52,7 @@ onMounted(() => {
 const navItems = [
   { to: '/', label: '首页', icon: Brain },
   { to: '/memories', label: '记忆', icon: Search },
+  { to: '/capsules', label: '时间胶囊', icon: Hourglass },
   { to: '/graph', label: '图谱', icon: GitGraph },
   { to: '/analytics', label: '分析', icon: BarChart3 },
   { to: '/compare', label: '对比', icon: GitCompare },

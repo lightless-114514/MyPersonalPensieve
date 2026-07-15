@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -15,6 +15,10 @@ import type {
   InsightReportListItem,
   WeeklyStatus,
   InsightArchive,
+  TimeCapsule,
+  TimeCapsuleDetail,
+  CapsuleStats,
+  CapsulePagedResult,
 } from '@/types'
 
 function snakeToCamel(str: string): string {
@@ -244,4 +248,65 @@ export interface BirthdayWishResponse {
 export async function generateBirthdayWish() {
   const { data } = await api.post<BirthdayWishResponse>('/birthday/wish', {}, { timeout: 30000 })
   return data
+}
+
+// ---- Time Capsule APIs ----
+
+export async function createCapsule(payload: {
+  memoryId: string
+  title: string
+  openDate: string
+  message?: string
+}) {
+  const { data } = await api.post<TimeCapsule>('/capsules', {
+    memory_id: payload.memoryId,
+    title: payload.title,
+    open_date: payload.openDate,
+    message: payload.message || null,
+  })
+  return data
+}
+
+export async function getCapsuleStats() {
+  const { data } = await api.get<CapsuleStats>('/capsules/stats')
+  return data
+}
+
+export async function checkReadyCapsules() {
+  const { data } = await api.get<Array<{
+    id: string
+    title: string
+    openDate: string
+    buriedDate: string
+  }>>('/capsules/check-ready')
+  return data
+}
+
+export async function getCapsules(params: {
+  page?: number
+  size?: number
+  status?: string
+  search?: string
+}) {
+  const { data } = await api.get<CapsulePagedResult>('/capsules', { params })
+  return data
+}
+
+export async function getCapsuleDetail(capsuleId: string) {
+  const { data } = await api.get<TimeCapsuleDetail>(`/capsules/${capsuleId}`)
+  return data
+}
+
+export async function openCapsule(capsuleId: string) {
+  const { data } = await api.post<TimeCapsuleDetail>(`/capsules/${capsuleId}/open`)
+  return data
+}
+
+export async function forceOpenCapsule(capsuleId: string) {
+  const { data } = await api.post<TimeCapsuleDetail>(`/capsules/${capsuleId}/force-open`)
+  return data
+}
+
+export async function deleteCapsule(capsuleId: string) {
+  await api.delete(`/capsules/${capsuleId}`)
 }

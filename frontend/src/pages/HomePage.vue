@@ -13,6 +13,7 @@ import BirthdayWishCard from '@/components/BirthdayWishCard.vue'
 import BirthdayMemoryReview from '@/components/BirthdayMemoryReview.vue'
 import BirthdayWish from '@/components/BirthdayWish.vue'
 import BirthdayReminder from '@/components/BirthdayReminder.vue'
+import CapsuleNotification from '@/components/CapsuleNotification.vue'
 import { useRouter } from 'vue-router'
 import { getFilePreviewUrl } from '@/api'
 
@@ -71,6 +72,9 @@ function handleWordClick(word: string) {
 
     <!-- 生日提醒条 -->
     <BirthdayReminder />
+
+    <!-- 时间胶囊到期通知 -->
+    <CapsuleNotification />
 
     <!-- 生日专属区域 -->
     <div v-if="birthdayStore.isBirthdayToday" class="space-y-4 animate-fade-in">

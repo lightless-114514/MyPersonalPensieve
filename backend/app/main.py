@@ -7,6 +7,7 @@ from app.routes import memories, analytics, compare
 from app.routes.files import router as files_router
 from app.routes.insight import router as insight_router
 from app.routes.birthday import router as birthday_router
+from app.routes.capsule import router as capsule_router
 from app.services.redis_service import redis_service
 from app.services.llm_service import llm_service
 from app.services.qdrant_service import qdrant_service
@@ -67,6 +68,7 @@ app.include_router(compare.router)
 app.include_router(files_router)
 app.include_router(insight_router)
 app.include_router(birthday_router)
+app.include_router(capsule_router)
 
 
 @app.get("/api/health")

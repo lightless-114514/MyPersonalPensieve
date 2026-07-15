@@ -196,3 +196,44 @@ export interface KeywordPoint {
   titlesSummary?: string
   weekStart?: string
 }
+
+// ---- Time Capsule feature ----
+
+export type CapsuleStatus = 'SEALED' | 'OPENED' | 'FORCED_OPEN'
+
+export interface TimeCapsule {
+  id: string
+  memoryId: string
+  title: string
+  openDate: string
+  buriedDate: string
+  status: CapsuleStatus
+  openedAt: string | null
+  isForced: boolean
+  message: string | null
+  memoryTitle: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface TimeCapsuleDetail extends TimeCapsule {
+  memoryContent: string | null
+  memoryType: string | null
+}
+
+export interface CapsuleStats {
+  waitingCount: number
+  openedCount: number
+  forcedCount: number
+  readyCount: number
+}
+
+export interface CapsulePagedResult {
+  content: TimeCapsule[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+  first: boolean
+}

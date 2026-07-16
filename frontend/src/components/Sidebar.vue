@@ -25,6 +25,7 @@ import {
   ChevronRight,
   Loader2,
   Hourglass,
+  Download,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -56,6 +57,7 @@ const navItems = [
   { to: '/graph', label: '图谱', icon: GitGraph },
   { to: '/analytics', label: '分析', icon: BarChart3 },
   { to: '/compare', label: '对比', icon: GitCompare },
+  { to: '/export', label: '导出', icon: Download },
   { to: '/settings', label: '设置', icon: Settings },
 ]
 

@@ -68,6 +68,11 @@ const router = createRouter({
       name: 'capsule-detail',
       component: () => import('@/pages/CapsuleDetailPage.vue'),
     },
+    {
+      path: '/export',
+      name: 'export',
+      component: () => import('@/pages/ExportPage.vue'),
+    },
   ],
 })
 

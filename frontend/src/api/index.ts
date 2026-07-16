@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -103,6 +103,19 @@ export async function getMemories(params: { page?: number; size?: number; favori
 export async function getRecentMemories(limit: number = 10) {
   const { data } = await api.get<Memory[]>('/memories/recent', { params: { limit } })
   return data
+}
+
+export async function getAllMemoriesForExport(): Promise<Memory[]> {
+  const all: Memory[] = []
+  let page = 0
+  let last = false
+  while (!last) {
+    const res = await getMemories({ page, size: 100 })
+    if (res.content?.length) all.push(...res.content)
+    last = res.last
+    page++
+  }
+  return all
 }
 
 export async function getMemory(id: string) {

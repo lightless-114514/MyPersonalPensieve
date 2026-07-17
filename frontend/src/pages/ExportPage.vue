@@ -31,6 +31,10 @@ const dateTo = ref('')
 const tagFilter = ref('')
 const favoriteOnly = ref(false)
 
+// ---- Export settings ----
+const showBranding = ref(true)
+const customIntro = ref('')
+
 // ---- Load memories ----
 const { data: memories, isLoading } = useQuery({
   queryKey: ['export-memories'],
@@ -117,11 +121,15 @@ function clearFilters() {
 // ---- Export Markdown ----
 function generateMarkdown(items: Memory[]): string {
   const lines: string[] = []
-  lines.push('# Pensieve 记忆导出')
+  lines.push(showBranding.value ? '# 🧠 Pensieve 记忆导出' : '# 记忆导出')
   lines.push('')
   lines.push(`> 导出时间：${new Date().toLocaleString('zh-CN')}`)
   lines.push(`> 共 ${items.length} 篇记忆`)
   lines.push('')
+  if (customIntro.value.trim()) {
+    lines.push(customIntro.value.trim())
+    lines.push('')
+  }
   lines.push('---')
   lines.push('')
 
@@ -202,11 +210,17 @@ function buildPDFHtml(items: Memory[]): string {
     })
     .join('')
 
+  const brandingTitle = showBranding.value ? '🧠 Pensieve 记忆导出' : '记忆导出'
+  const introHtml = customIntro.value.trim()
+    ? `<p style="margin:12px 0 0;font-size:14px;color:#444;line-height:1.8;white-space:pre-wrap;">${escapeHtml(customIntro.value.trim())}</p>`
+    : ''
+
   return `
     <div style="font-family:'PingFang SC','Microsoft YaHei','Helvetica Neue',Arial,sans-serif;padding:20px;color:#1a1a1a;">
       <div style="text-align:center;margin-bottom:30px;padding-bottom:20px;border-bottom:2px solid #e8e8e8;">
-        <h1 style="margin:0;font-size:24px;color:#1a1a1a;">🧠 Pensieve 记忆导出</h1>
+        <h1 style="margin:0;font-size:24px;color:#1a1a1a;">${brandingTitle}</h1>
         <p style="margin:8px 0 0;font-size:12px;color:#888;">导出时间：${new Date().toLocaleString('zh-CN')} · 共 ${items.length} 篇记忆</p>
+        ${introHtml}
       </div>
       ${memoriesHtml}
     </div>
@@ -310,6 +324,40 @@ const previewContent = computed(() => {
         <FileText class="w-4 h-4" />
         Markdown
       </button>
+    </div>
+
+    <!-- Export settings -->
+    <div class="p-4 rounded-xl border border-border bg-card space-y-3">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-sm font-medium">导出设置</span>
+      </div>
+      <div class="flex items-center justify-between">
+        <label class="text-sm text-muted-foreground">包含 🧠 Pensieve 品牌</label>
+        <button
+          @click="showBranding = !showBranding"
+          :class="[
+            'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring/50',
+            showBranding ? 'bg-primary' : 'bg-muted'
+          ]"
+        >
+          <span
+            :class="[
+              'inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200',
+              showBranding ? 'translate-x-6' : 'translate-x-1'
+            ]"
+          />
+        </button>
+      </div>
+      <div class="space-y-1.5">
+        <label class="text-sm text-muted-foreground">自定义开头文字</label>
+        <textarea
+          v-model="customIntro"
+          placeholder="例如：这是我这些天的收获…"
+          rows="3"
+          class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all duration-200 resize-none"
+        />
+        <p class="text-xs text-muted-foreground/60">留空则不添加自定义开头，支持换行</p>
+      </div>
     </div>
 
     <!-- Filters -->

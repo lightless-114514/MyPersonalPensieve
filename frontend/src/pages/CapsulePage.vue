@@ -110,7 +110,7 @@ const createMutation = useMutation({
     return createCapsule({
       memoryId: createForm.value.memoryId,
       title: createForm.value.title,
-      openDate: new Date(createForm.value.openDate).toISOString(),
+      openDate: createForm.value.openDate + 'T00:00:00',
       message: createForm.value.message.trim() || undefined,
     })
   },

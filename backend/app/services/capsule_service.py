@@ -15,6 +15,17 @@ from app.schemas.capsule import (
 )
 
 
+def _ensure_naive(dt: datetime) -> datetime:
+    """将时区感知的datetime转换为naive datetime（去掉时区信息），
+    避免与 datetime.now() 比较时抛出 TypeError。
+    前端可能发送带Z后缀的ISO时间字符串（如 2026-07-19T00:00:00.000Z），
+    Pydantic会将其解析为时区感知datetime，而 datetime.now() 是naive的，
+    两者无法直接比较。"""
+    if dt.tzinfo is not None:
+        return dt.replace(tzinfo=None)
+    return dt
+
+
 class CapsuleService:
     """时间胶囊服务"""
 
@@ -25,14 +36,17 @@ class CapsuleService:
         if not memory:
             raise ValueError("关联的日记不存在")
 
+        # 将时区感知datetime转为naive，确保与 datetime.now() 兼容比较
+        open_date = _ensure_naive(req.open_date)
+
         # 验证开启日期在未来
-        if req.open_date <= datetime.now():
+        if open_date <= datetime.now():
             raise ValueError("开启日期必须在当前时间之后")
 
         capsule = TimeCapsule(
             memory_id=req.memory_id,
             title=req.title,
-            open_date=req.open_date,
+            open_date=open_date,
             message=req.message,
             status=CapsuleStatus.SEALED,
         )

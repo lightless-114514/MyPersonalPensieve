@@ -293,6 +293,13 @@ function closeDetail() {
   detailMemory.value = null
 }
 
+// ─── Keyboard: Escape to close detail panel ────────────────────
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && detailPanel.value.visible) {
+    closeDetail()
+  }
+}
+
 // ─── Fit to screen ─────────────────────────────────────────────
 function fitToScreen() {
   if (!currentSvg || !currentG || !currentZoom || !container.value) return
@@ -361,6 +368,14 @@ function renderForce() {
     })
   svg.call(zoom)
   currentZoom = zoom
+
+  // Click on SVG background to close detail panel
+  svg.on('click', (event: MouseEvent) => {
+    // Only close if clicking directly on the SVG background (not on nodes)
+    if (event.target === svg.node() || (event.target as Element).tagName === 'rect') {
+      closeDetail()
+    }
+  })
 
   // Initialize canvas nodes and links
   canvasNodes = graph.value.nodes.map((n) => ({ ...n }))
@@ -454,6 +469,7 @@ function renderForce() {
   // ─── Click: open detail ────────────────────────────────────
   let clickTimer: number | null = null
   node.on('click', (event: MouseEvent, d: any) => {
+    event.stopPropagation() // Prevent SVG background click from closing panel
     if (event.shiftKey) {
       // Shift + Click: add neighbors
       event.preventDefault()
@@ -558,6 +574,13 @@ function renderTree() {
   svg.call(zoom)
   currentZoom = zoom
 
+  // Click on SVG background to close detail panel
+  svg.on('click', (event: MouseEvent) => {
+    if (event.target === svg.node() || (event.target as Element).tagName === 'rect') {
+      closeDetail()
+    }
+  })
+
   const root = d3.hierarchy<any>(rootData)
   const treeLayout = d3.tree<any>()
     .size([height - 80, width - 200])
@@ -608,6 +631,7 @@ function renderTree() {
     .style('cursor', 'pointer')
     .on('click', (event: MouseEvent, d: any) => {
       if (d.data.id === '__virtual__') return
+      event.stopPropagation() // Prevent SVG background click from closing panel
       if (event.shiftKey) {
         event.preventDefault()
         addNeighborsToCanvas(d.data)
@@ -689,6 +713,7 @@ function handleResize() {
 onMounted(() => {
   renderGraph()
   window.addEventListener('resize', handleResize)
+  window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
@@ -704,6 +729,7 @@ onUnmounted(() => {
     d3.select(container.value).selectAll('svg').remove()
   }
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 watch(graph, () => {
@@ -853,67 +879,78 @@ watch(showArrows, () => {
         <ChevronRight class="w-4 h-4" />
       </button>
 
-      <!-- Detail panel (slide-in from right) -->
+      <!-- Detail panel backdrop + slide-in drawer -->
       <Transition name="slide">
-        <div
-          v-if="detailPanel.visible && detailPanel.node"
-          class="absolute top-0 right-0 z-50 h-full w-80 bg-popover/98 backdrop-blur-sm border-l border-border shadow-xl overflow-y-auto"
-        >
-          <div class="p-4 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="text-lg font-semibold text-popover-foreground truncate">{{ detailPanel.node.name }}</h3>
-              <button @click="closeDetail" class="text-muted-foreground hover:text-foreground transition-colors">
-                <X class="w-5 h-5" />
-              </button>
-            </div>
-            <div class="flex items-center gap-2">
-              <span
-                class="w-3 h-3 rounded-full flex-shrink-0"
-                :style="{ backgroundColor: getNodeColor(detailPanel.node) }"
-              ></span>
-              <span class="text-sm text-muted-foreground">
-                {{ NODE_LABELS[detailPanel.node.nodeType] || '未知' }}
-              </span>
-              <span class="text-sm text-muted-foreground">·</span>
-              <span class="text-sm text-muted-foreground">{{ detailPanel.node.type }}</span>
-            </div>
-            <!-- Memory detail for summary nodes -->
-            <div v-if="detailPanel.node.nodeType === 'summary'" class="space-y-3">
-              <div v-if="detailLoading" class="text-sm text-muted-foreground">加载中...</div>
-              <template v-else-if="detailMemory">
-                <div class="text-sm text-muted-foreground">
-                  <span class="font-medium text-popover-foreground">ID:</span>
-                  {{ detailMemory.id?.slice(0, 12) }}...
-                </div>
-                <div v-if="detailMemory.content" class="space-y-1">
-                  <span class="text-sm font-medium text-popover-foreground">内容</span>
-                  <p class="text-sm text-muted-foreground line-clamp-6 whitespace-pre-wrap">{{ detailMemory.content }}</p>
-                </div>
-                <div v-if="detailMemory.tags?.length" class="space-y-1">
-                  <span class="text-sm font-medium text-popover-foreground">标签</span>
-                  <div class="flex flex-wrap gap-1">
-                    <span
-                      v-for="tag in detailMemory.tags"
-                      :key="tag"
-                      class="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
-                    >{{ tag }}</span>
-                  </div>
-                </div>
-                <div v-if="detailMemory.createdAt" class="text-sm text-muted-foreground">
-                  <span class="font-medium text-popover-foreground">创建时间:</span>
-                  {{ new Date(detailMemory.createdAt).toLocaleString() }}
-                </div>
-              </template>
-            </div>
-            <!-- Entity/concept detail -->
-            <div v-else class="space-y-2">
-              <div class="text-sm text-muted-foreground">
-                <span class="font-medium text-popover-foreground">类型:</span>
-                {{ detailPanel.node.type }}
+        <div v-if="detailPanel.visible && detailPanel.node" class="absolute inset-0 z-50 flex justify-end">
+          <!-- Semi-transparent backdrop -->
+          <div
+            class="absolute inset-0 bg-black/20"
+            @click="closeDetail"
+          ></div>
+          <!-- Panel content -->
+          <div
+            class="relative z-10 h-full w-80 bg-popover/98 backdrop-blur-sm border-l border-border shadow-xl overflow-y-auto"
+            @click.stop
+            @wheel.stop
+            @mousedown.stop
+            @pointerdown.stop
+          >
+            <div class="p-4 space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-popover-foreground truncate">{{ detailPanel.node.name }}</h3>
+                <button @click="closeDetail" class="text-muted-foreground hover:text-foreground transition-colors">
+                  <X class="w-5 h-5" />
+                </button>
               </div>
-              <div class="text-sm text-muted-foreground">
-                <span class="font-medium text-popover-foreground">分类:</span>
-                {{ NODE_LABELS[detailPanel.node.nodeType] || '未知' }}
+              <div class="flex items-center gap-2">
+                <span
+                  class="w-3 h-3 rounded-full flex-shrink-0"
+                  :style="{ backgroundColor: getNodeColor(detailPanel.node) }"
+                ></span>
+                <span class="text-sm text-muted-foreground">
+                  {{ NODE_LABELS[detailPanel.node.nodeType] || '未知' }}
+                </span>
+                <span class="text-sm text-muted-foreground">·</span>
+                <span class="text-sm text-muted-foreground">{{ detailPanel.node.type }}</span>
+              </div>
+              <!-- Memory detail for summary nodes -->
+              <div v-if="detailPanel.node.nodeType === 'summary'" class="space-y-3">
+                <div v-if="detailLoading" class="text-sm text-muted-foreground">加载中...</div>
+                <template v-else-if="detailMemory">
+                  <div class="text-sm text-muted-foreground">
+                    <span class="font-medium text-popover-foreground">ID:</span>
+                    {{ detailMemory.id?.slice(0, 12) }}...
+                  </div>
+                  <div v-if="detailMemory.content" class="space-y-1">
+                    <span class="text-sm font-medium text-popover-foreground">内容</span>
+                    <p class="text-sm text-muted-foreground line-clamp-6 whitespace-pre-wrap">{{ detailMemory.content }}</p>
+                  </div>
+                  <div v-if="detailMemory.tags?.length" class="space-y-1">
+                    <span class="text-sm font-medium text-popover-foreground">标签</span>
+                    <div class="flex flex-wrap gap-1">
+                      <span
+                        v-for="tag in detailMemory.tags"
+                        :key="tag"
+                        class="px-2 py-0.5 bg-secondary text-secondary-foreground rounded text-xs"
+                      >{{ tag }}</span>
+                    </div>
+                  </div>
+                  <div v-if="detailMemory.createdAt" class="text-sm text-muted-foreground">
+                    <span class="font-medium text-popover-foreground">创建时间:</span>
+                    {{ new Date(detailMemory.createdAt).toLocaleString() }}
+                  </div>
+                </template>
+              </div>
+              <!-- Entity/concept detail -->
+              <div v-else class="space-y-2">
+                <div class="text-sm text-muted-foreground">
+                  <span class="font-medium text-popover-foreground">类型:</span>
+                  {{ detailPanel.node.type }}
+                </div>
+                <div class="text-sm text-muted-foreground">
+                  <span class="font-medium text-popover-foreground">分类:</span>
+                  {{ NODE_LABELS[detailPanel.node.nodeType] || '未知' }}
+                </div>
               </div>
             </div>
           </div>

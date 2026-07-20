@@ -104,9 +104,12 @@ function selectMemory(memoryId: string, memoryTitle: string) {
   createStep.value = 2
 }
 
+const createError = ref('')
+
 const createMutation = useMutation({
   mutationFn: async () => {
     if (!createForm.value.openDate) throw new Error('请选择开启日期')
+    createError.value = ''
     return createCapsule({
       memoryId: createForm.value.memoryId,
       title: createForm.value.title,
@@ -120,11 +123,18 @@ const createMutation = useMutation({
     showCreate.value = false
     resetCreateForm()
   },
+  onError: (err: any) => {
+    console.error('创建胶囊失败:', err)
+    const detail = err?.response?.data?.detail
+    const msg = detail || (err?.message === 'Network Error' ? '网络错误，请检查后端服务是否启动' : err?.message) || '创建失败，请重试'
+    createError.value = msg
+  },
 })
 
 function resetCreateForm() {
   createForm.value = { memoryId: '', title: '', openDate: '', message: '' }
   createStep.value = 1
+  createError.value = ''
 }
 
 function closeCreateDialog() {
@@ -195,11 +205,14 @@ function formatRelative(dateStr: string) {
   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-// Min date for date picker (tomorrow)
+// Min date for date picker (tomorrow in local timezone)
 const minDate = computed(() => {
   const d = new Date()
   d.setDate(d.getDate() + 1)
-  return d.toISOString().slice(0, 10)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 })
 </script>
 
@@ -496,23 +509,27 @@ const minDate = computed(() => {
             </div>
 
             <!-- Footer -->
-            <div class="p-5 border-t border-border flex items-center justify-end gap-3">
-              <button
-                @click="closeCreateDialog"
-                class="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent transition-all"
-              >
-                取消
-              </button>
-              <button
-                v-if="createStep === 2"
-                :disabled="!createForm.title.trim() || !createForm.openDate || !!createMutation.isPending"
-                @click="createMutation.mutate()"
-                class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                <Loader2 v-if="createMutation.isPending" class="w-4 h-4 animate-spin" />
-                <Hourglass v-else class="w-4 h-4" />
-                封存胶囊
-              </button>
+            <div class="p-5 border-t border-border">
+              <!-- Error message -->
+              <p v-if="createError" class="text-sm text-red-500 dark:text-red-400 mb-3 text-center">{{ createError }}</p>
+              <div class="flex items-center justify-end gap-3">
+                <button
+                  @click="closeCreateDialog"
+                  class="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  v-if="createStep === 2"
+                  :disabled="!createForm.title.trim() || !createForm.openDate || !!createMutation.isPending"
+                  @click="createMutation.mutate()"
+                  class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <Loader2 v-if="createMutation.isPending" class="w-4 h-4 animate-spin" />
+                  <Hourglass v-else class="w-4 h-4" />
+                  封存胶囊
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -32,6 +32,7 @@ const { data: capsule, isLoading, refetch } = useQuery({
 })
 
 // ---- Open Capsule ----
+const isOpening = ref(false)
 const openMutation = useMutation({
   mutationFn: () => openCapsule(capsuleId),
   onSuccess: () => {
@@ -40,12 +41,14 @@ const openMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['capsule-stats'] })
     refetch()
   },
+  onSettled: () => { isOpening.value = false },
 })
 
 // ---- Force Open (with cooldown) ----
 const showForceConfirm = ref(false)
 const forceCooldown = ref(0) // 30s countdown
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
+const isForceOpening = ref(false)
 
 const forceOpenMutation = useMutation({
   mutationFn: () => forceOpenCapsule(capsuleId),
@@ -56,6 +59,7 @@ const forceOpenMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['capsule-stats'] })
     refetch()
   },
+  onSettled: () => { isForceOpening.value = false },
 })
 
 function startForceConfirm() {
@@ -81,6 +85,7 @@ function cancelForce() {
 
 function executeForceOpen() {
   if (forceCooldown.value > 0) return
+  isForceOpening.value = true
   forceOpenMutation.mutate()
 }
 
@@ -89,15 +94,18 @@ onUnmounted(() => {
 })
 
 // ---- Delete ----
+const isDeleting = ref(false)
 const deleteMutation = useMutation({
   mutationFn: () => deleteCapsule(capsuleId),
   onSuccess: () => {
     router.push('/capsules')
   },
+  onSettled: () => { isDeleting.value = false },
 })
 
 function handleDelete() {
   if (confirm('确定要删除这个时间胶囊吗？此操作不可撤销。')) {
+    isDeleting.value = true
     deleteMutation.mutate()
   }
 }
@@ -254,11 +262,11 @@ function statusClass(status: CapsuleStatus) {
             <!-- Open button (when ready) -->
             <button
               v-if="capsule.status === 'SEALED' && isReady(capsule.openDate)"
-              @click="openMutation.mutate()"
-              :disabled="!!openMutation.isPending"
+              @click="isOpening = true; openMutation.mutate()"
+              :disabled="isOpening"
               class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50 transition-all shadow-sm"
             >
-              <Loader2 v-if="openMutation.isPending" class="w-4 h-4 animate-spin" />
+              <Loader2 v-if="isOpening" class="w-4 h-4 animate-spin" />
               <LockOpen v-else class="w-4 h-4" />
               开启胶囊
             </button>
@@ -276,7 +284,7 @@ function statusClass(status: CapsuleStatus) {
             <!-- Delete -->
             <button
               @click="handleDelete"
-              :disabled="!!deleteMutation.isPending"
+              :disabled="isDeleting"
               class="flex items-center gap-2 px-4 py-2.5 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-sm transition-all"
             >
               <Trash2 class="w-4 h-4" />
@@ -366,11 +374,11 @@ function statusClass(status: CapsuleStatus) {
                   再想想
                 </button>
                 <button
-                  :disabled="forceCooldown > 0 || !!forceOpenMutation.isPending"
+                  :disabled="forceCooldown > 0 || isForceOpening"
                   @click="executeForceOpen"
                   class="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  <Loader2 v-if="forceOpenMutation.isPending" class="w-4 h-4 animate-spin" />
+                  <Loader2 v-if="isForceOpening" class="w-4 h-4 animate-spin" />
                   <Unlock v-else class="w-4 h-4" />
                   {{ forceCooldown > 0 ? `等待 ${forceCooldown}s` : '确认破拆' }}
                 </button>

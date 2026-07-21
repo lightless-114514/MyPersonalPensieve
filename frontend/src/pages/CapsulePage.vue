@@ -105,11 +105,13 @@ function selectMemory(memoryId: string, memoryTitle: string) {
 }
 
 const createError = ref('')
+const isCreating = ref(false)
 
 const createMutation = useMutation({
   mutationFn: async () => {
     if (!createForm.value.openDate) throw new Error('请选择开启日期')
     createError.value = ''
+    isCreating.value = true
     return createCapsule({
       memoryId: createForm.value.memoryId,
       title: createForm.value.title,
@@ -128,6 +130,9 @@ const createMutation = useMutation({
     const detail = err?.response?.data?.detail
     const msg = detail || (err?.message === 'Network Error' ? '网络错误，请检查后端服务是否启动' : err?.message) || '创建失败，请重试'
     createError.value = msg
+  },
+  onSettled: () => {
+    isCreating.value = false
   },
 })
 
@@ -521,11 +526,11 @@ const minDate = computed(() => {
                 </button>
                 <button
                   v-if="createStep === 2"
-                  :disabled="!createForm.title.trim() || !createForm.openDate || !!createMutation.isPending"
+                  :disabled="!createForm.title.trim() || !createForm.openDate || isCreating"
                   @click="createMutation.mutate()"
                   class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  <Loader2 v-if="createMutation.isPending" class="w-4 h-4 animate-spin" />
+                  <Loader2 v-if="isCreating" class="w-4 h-4 animate-spin" />
                   <Hourglass v-else class="w-4 h-4" />
                   封存胶囊
                 </button>

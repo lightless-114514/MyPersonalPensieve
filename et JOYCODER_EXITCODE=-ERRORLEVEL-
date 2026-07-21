@@ -1,0 +1,98 @@
+[1mdiff --git a/frontend/src/pages/CapsulePage.vue b/frontend/src/pages/CapsulePage.vue[m
+[1mindex ec3e948..d833962 100644[m
+[1m--- a/frontend/src/pages/CapsulePage.vue[m
+[1m+++ b/frontend/src/pages/CapsulePage.vue[m
+[36m@@ -104,9 +104,12 @@[m [mfunction selectMemory(memoryId: string, memoryTitle: string) {[m
+   createStep.value = 2[m
+ }[m
+ [m
+[32m+[m[32mconst createError = ref('')[m
+[32m+[m
+ const createMutation = useMutation({[m
+   mutationFn: async () => {[m
+     if (!createForm.value.openDate) throw new Error('请选择开启日期')[m
+[32m+[m[32m    createError.value = ''[m
+     return createCapsule({[m
+       memoryId: createForm.value.memoryId,[m
+       title: createForm.value.title,[m
+[36m@@ -120,11 +123,18 @@[m [mconst createMutation = useMutation({[m
+     showCreate.value = false[m
+     resetCreateForm()[m
+   },[m
+[32m+[m[32m  onError: (err: any) => {[m
+[32m+[m[32m    console.error('创建胶囊失败:', err)[m
+[32m+[m[32m    const detail = err?.response?.data?.detail[m
+[32m+[m[32m    const msg = detail || (err?.message === 'Network Error' ? '网络错误，请检查后端服务是否启动' : err?.message) || '创建失败，请重试'[m
+[32m+[m[32m    createError.value = msg[m
+[32m+[m[32m  },[m
+ })[m
+ [m
+ function resetCreateForm() {[m
+   createForm.value = { memoryId: '', title: '', openDate: '', message: '' }[m
+   createStep.value = 1[m
+[32m+[m[32m  createError.value = ''[m
+ }[m
+ [m
+ function closeCreateDialog() {[m
+[36m@@ -195,11 +205,14 @@[m [mfunction formatRelative(dateStr: string) {[m
+   return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })[m
+ }[m
+ [m
+[31m-// Min date for date picker (tomorrow)[m
+[32m+[m[32m// Min date for date picker (tomorrow in local timezone)[m
+ const minDate = computed(() => {[m
+   const d = new Date()[m
+   d.setDate(d.getDate() + 1)[m
+[31m-  return d.toISOString().slice(0, 10)[m
+[32m+[m[32m  const y = d.getFullYear()[m
+[32m+[m[32m  const m = String(d.getMonth() + 1).padStart(2, '0')[m
+[32m+[m[32m  const day = String(d.getDate()).padStart(2, '0')[m
+[32m+[m[32m  return `${y}-${m}-${day}`[m
+ })[m
+ </script>[m
+ [m
+[36m@@ -496,23 +509,27 @@[m [mconst minDate = computed(() => {[m
+             </div>[m
+ [m
+             <!-- Footer -->[m
+[31m-            <div class="p-5 border-t border-border flex items-center justify-end gap-3">[m
+[31m-              <button[m
+[31m-                @click="closeCreateDialog"[m
+[31m-                class="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent transition-all"[m
+[31m-              >[m
+[31m-                取消[m
+[31m-              </button>[m
+[31m-              <button[m
+[31m-                v-if="createStep === 2"[m
+[31m-                :disabled="!createForm.title.trim() || !createForm.openDate || !!createMutation.isPending"[m
+[31m-                @click="createMutation.mutate()"[m
+[31m-                class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"[m
+[31m-              >[m
+[31m-                <Loader2 v-if="createMutation.isPending" class="w-4 h-4 animate-spin" />[m
+[31m-                <Hourglass v-else class="w-4 h-4" />[m
+[31m-                封存胶囊[m
+[31m-              </button>[m
+[32m+[m[32m            <div class="p-5 border-t border-border">[m
+[32m+[m[32m              <!-- Error message -->[m
+[32m+[m[32m              <p v-if="createError" class="text-sm text-red-500 dark:text-red-400 mb-3 text-center">{{ createError }}</p>[m
+[32m+[m[32m              <div class="flex items-center justify-end gap-3">[m
+[32m+[m[32m                <button[m
+[32m+[m[32m                  @click="closeCreateDialog"[m
+[32m+[m[32m                  class="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent transition-all"[m
+[32m+[m[32m                >[m
+[32m+[m[32m                  取消[m
+[32m+[m[32m                </button>[m
+[32m+[m[32m                <button[m
+[32m+[m[32m                  v-if="createStep === 2"[m
+[32m+[m[32m                  :disabled="!createForm.title.trim() || !createForm.openDate || !!createMutation.isPending"[m
+[32m+[m[32m                  @click="createMutation.mutate()"[m
+[32m+[m[32m                  class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"[m
+[32m+[m[32m                >[m
+[32m+[m[32m                  <Loader2 v-if="createMutation.isPending" class="w-4 h-4 animate-spin" />[m
+[32m+[m[32m                  <Hourglass v-else class="w-4 h-4" />[m
+[32m+[m[32m                  封存胶囊[m
+[32m+[m[32m                </button>[m
+[32m+[m[32m              </div>[m
+             </div>[m
+           </div>[m
+         </div>[m

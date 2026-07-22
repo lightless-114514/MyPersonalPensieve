@@ -31,10 +31,22 @@ class CapsuleService:
 
     async def create(self, db: AsyncSession, req: CapsuleCreateRequest) -> CapsuleResponse:
         """创建时间胶囊"""
-        # 验证关联日记存在
-        memory = await db.get(Memory, req.memory_id)
-        if not memory:
-            raise ValueError("关联的日记不存在")
+        # 验证：必须提供 memory_id 或 content 之一
+        if not req.memory_id and not req.content:
+            raise ValueError("必须选择一篇记忆或输入胶囊内容")
+        if req.memory_id and req.content:
+            raise ValueError("不能同时选择记忆和输入内容")
+
+        memory_title = None
+        source_type = "custom"
+
+        # 如果从记忆库选取，验证记忆存在
+        if req.memory_id:
+            memory = await db.get(Memory, req.memory_id)
+            if not memory:
+                raise ValueError("关联的日记不存在")
+            memory_title = memory.title
+            source_type = "memory"
 
         # 将时区感知datetime转为naive，确保与 datetime.now() 兼容比较
         open_date = _ensure_naive(req.open_date)
@@ -45,6 +57,7 @@ class CapsuleService:
 
         capsule = TimeCapsule(
             memory_id=req.memory_id,
+            content=req.content if not req.memory_id else None,
             title=req.title,
             open_date=open_date,
             message=req.message,
@@ -57,6 +70,7 @@ class CapsuleService:
         return CapsuleResponse(
             id=capsule.id,
             memory_id=capsule.memory_id,
+            content=capsule.content,
             title=capsule.title,
             open_date=capsule.open_date,
             buried_date=capsule.buried_date,
@@ -64,7 +78,8 @@ class CapsuleService:
             opened_at=capsule.opened_at,
             is_forced=capsule.is_forced,
             message=capsule.message,
-            memory_title=memory.title,
+            memory_title=memory_title,
+            source_type=source_type,
             created_at=capsule.created_at,
             updated_at=capsule.updated_at,
         )
@@ -141,6 +156,7 @@ class CapsuleService:
             items.append(CapsuleResponse(
                 id=c.id,
                 memory_id=c.memory_id,
+                content=c.content,
                 title=c.title,
                 open_date=c.open_date,
                 buried_date=c.buried_date,
@@ -149,6 +165,7 @@ class CapsuleService:
                 is_forced=c.is_forced,
                 message=c.message,
                 memory_title=c.memory.title if c.memory else None,
+                source_type="memory" if c.memory_id else "custom",
                 created_at=c.created_at,
                 updated_at=c.updated_at,
             ))
@@ -172,14 +189,20 @@ class CapsuleService:
 
         memory_content = None
         memory_type = None
-        # 只有已开启的胶囊才返回日记内容
+        # 只有已开启的胶囊才返回内容
         if capsule.status in (CapsuleStatus.OPENED, CapsuleStatus.FORCED_OPEN):
-            memory_content = capsule.memory.content if capsule.memory else None
-            memory_type = capsule.memory.type.value if capsule.memory else None
+            if capsule.memory:
+                memory_content = capsule.memory.content
+                memory_type = capsule.memory.type.value
+            elif capsule.content:
+                # 自带内容的胶囊
+                memory_content = capsule.content
+                memory_type = "TEXT"
 
         return CapsuleDetailResponse(
             id=capsule.id,
             memory_id=capsule.memory_id,
+            content=capsule.content,
             title=capsule.title,
             open_date=capsule.open_date,
             buried_date=capsule.buried_date,
@@ -188,6 +211,7 @@ class CapsuleService:
             is_forced=capsule.is_forced,
             message=capsule.message,
             memory_title=capsule.memory.title if capsule.memory else None,
+            source_type="memory" if capsule.memory_id else "custom",
             memory_content=memory_content,
             memory_type=memory_type,
             created_at=capsule.created_at,

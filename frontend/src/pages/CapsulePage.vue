@@ -28,6 +28,8 @@ import {
   PackageOpen,
   PackageCheck,
   Sparkles,
+  BookOpen,
+  PenLine,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -75,18 +77,20 @@ watch([search, statusFilter], () => {
 
 // ---- Create Dialog ----
 const showCreate = ref(false)
+const createSource = ref<'memory' | 'custom' | ''>('') // 选择来源
 const createForm = ref({
   memoryId: '',
   title: '',
+  content: '',
   openDate: '',
   message: '',
 })
-const createStep = ref(1) // 1=选择日记, 2=填写信息
+const createStep = ref(1) // 1=选择来源, 2=选择日记(记忆库模式)或填写内容(新建模式), 3=填写信息
 
 const { data: recentMemories } = useQuery({
   queryKey: ['recent-memories-for-capsule'],
   queryFn: () => getRecentMemories(50),
-  enabled: showCreate,
+  enabled: computed(() => showCreate.value && createSource.value === 'memory'),
 })
 
 const filteredMemories = computed(() => {
@@ -98,10 +102,30 @@ const filteredMemories = computed(() => {
   )
 })
 
+function selectSource(source: 'memory' | 'custom') {
+  createSource.value = source
+  createStep.value = 2
+}
+
 function selectMemory(memoryId: string, memoryTitle: string) {
   createForm.value.memoryId = memoryId
   createForm.value.title = memoryTitle
-  createStep.value = 2
+  createStep.value = 3
+}
+
+function goBackStep() {
+  if (createStep.value === 3) {
+    if (createSource.value === 'memory') {
+      createForm.value.memoryId = ''
+      createForm.value.title = ''
+      createStep.value = 2
+    } else {
+      createStep.value = 2
+    }
+  } else if (createStep.value === 2) {
+    createSource.value = ''
+    createStep.value = 1
+  }
 }
 
 const createError = ref('')
@@ -110,10 +134,12 @@ const isCreating = ref(false)
 const createMutation = useMutation({
   mutationFn: async () => {
     if (!createForm.value.openDate) throw new Error('请选择开启日期')
+    if (createSource.value === 'custom' && !createForm.value.content.trim()) throw new Error('请输入胶囊内容')
     createError.value = ''
     isCreating.value = true
     return createCapsule({
-      memoryId: createForm.value.memoryId,
+      memoryId: createSource.value === 'memory' ? createForm.value.memoryId : undefined,
+      content: createSource.value === 'custom' ? createForm.value.content.trim() : undefined,
       title: createForm.value.title,
       openDate: createForm.value.openDate + 'T00:00:00',
       message: createForm.value.message.trim() || undefined,
@@ -137,7 +163,8 @@ const createMutation = useMutation({
 })
 
 function resetCreateForm() {
-  createForm.value = { memoryId: '', title: '', openDate: '', message: '' }
+  createForm.value = { memoryId: '', title: '', content: '', openDate: '', message: '' }
+  createSource.value = ''
   createStep.value = 1
   createError.value = ''
 }
@@ -438,15 +465,48 @@ const minDate = computed(() => {
           <div class="bg-card border border-border rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col">
             <!-- Header -->
             <div class="flex items-center justify-between p-5 border-b border-border">
-              <h2 class="text-lg font-bold">新增时间胶囊</h2>
+              <h2 class="text-lg font-bold">{{ createStep === 1 ? '新增时间胶囊' : createStep === 2 ? (createSource === 'memory' ? '选择记忆' : '填写内容') : '封存胶囊' }}</h2>
               <button @click="closeCreateDialog" class="p-1 rounded-md hover:bg-accent transition-colors">
                 <X class="w-5 h-5" />
               </button>
             </div>
 
-            <!-- Step 1: Select Memory -->
+            <!-- Step 1: Choose Source -->
             <div v-if="createStep === 1" class="flex-1 overflow-y-auto p-5 space-y-3">
-              <p class="text-sm text-muted-foreground mb-3">选择一篇日记作为胶囊内容：</p>
+              <p class="text-sm text-muted-foreground mb-3">选择胶囊内容来源：</p>
+              <div
+                @click="selectSource('memory')"
+                class="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                    <BookOpen class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-medium">从记忆库选取</h4>
+                    <p class="text-xs text-muted-foreground mt-0.5">选择已有的一篇记忆封存到胶囊</p>
+                  </div>
+                </div>
+              </div>
+              <div
+                @click="selectSource('custom')"
+                class="p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                    <PenLine class="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-medium">新建胶囊内容</h4>
+                    <p class="text-xs text-muted-foreground mt-0.5">直接撰写内容，不存入记忆库</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2: Select Memory (memory mode) or Write Content (custom mode) -->
+            <div v-if="createStep === 2 && createSource === 'memory'" class="flex-1 overflow-y-auto p-5 space-y-3">
+              <p class="text-sm text-muted-foreground mb-3">选择一篇记忆作为胶囊内容：</p>
               <div
                 v-for="m in filteredMemories"
                 :key="m.id"
@@ -458,16 +518,44 @@ const minDate = computed(() => {
                 <p class="text-[10px] text-muted-foreground/50 mt-1">{{ formatDate(m.createdAt || m.created_at) }}</p>
               </div>
               <div v-if="filteredMemories.length === 0" class="text-center py-8 text-muted-foreground text-sm">
-                暂无日记可选，请先创建一篇日记
+                暂无记忆可选，请先创建一篇记忆
               </div>
             </div>
 
-            <!-- Step 2: Fill Details -->
-            <div v-if="createStep === 2" class="flex-1 overflow-y-auto p-5 space-y-4">
-              <!-- Selected memory -->
-              <div class="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                <p class="text-xs text-muted-foreground mb-1">已选择日记：</p>
+            <div v-if="createStep === 2 && createSource === 'custom'" class="flex-1 overflow-y-auto p-5 space-y-4">
+              <!-- Title -->
+              <div>
+                <label class="block text-sm font-medium mb-1.5">胶囊标题</label>
+                <input
+                  v-model="createForm.title"
+                  type="text"
+                  placeholder="给这个胶囊起个名字..."
+                  class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <!-- Content -->
+              <div>
+                <label class="block text-sm font-medium mb-1.5">胶囊内容</label>
+                <textarea
+                  v-model="createForm.content"
+                  rows="6"
+                  placeholder="写下你想给未来自己的话..."
+                  class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                />
+              </div>
+            </div>
+
+            <!-- Step 3: Fill Details -->
+            <div v-if="createStep === 3" class="flex-1 overflow-y-auto p-5 space-y-4">
+              <!-- Selected memory (memory mode) -->
+              <div v-if="createSource === 'memory'" class="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p class="text-xs text-muted-foreground mb-1">已选择记忆：</p>
                 <p class="text-sm font-medium">{{ createForm.title }}</p>
+              </div>
+              <!-- Custom content summary -->
+              <div v-if="createSource === 'custom'" class="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30">
+                <p class="text-xs text-muted-foreground mb-1">胶囊内容已填写</p>
+                <p class="text-sm font-medium truncate">{{ createForm.content.slice(0, 50) }}{{ createForm.content.length > 50 ? '...' : '' }}</p>
               </div>
 
               <!-- Title -->
@@ -506,10 +594,10 @@ const minDate = computed(() => {
 
               <!-- Back button -->
               <button
-                @click="createStep = 1"
+                @click="goBackStep"
                 class="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                ← 重新选择日记
+                ← {{ createSource === 'memory' ? '重新选择记忆' : '修改内容' }}
               </button>
             </div>
 
@@ -525,8 +613,16 @@ const minDate = computed(() => {
                   取消
                 </button>
                 <button
-                  v-if="createStep === 2"
-                  :disabled="!createForm.title.trim() || !createForm.openDate || isCreating"
+                  v-if="createStep === 2 && createSource === 'custom'"
+                  :disabled="!createForm.title.trim() || !createForm.content.trim() || isCreating"
+                  @click="createStep = 3"
+                  class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  下一步
+                </button>
+                <button
+                  v-if="createStep === 3"
+                  :disabled="!createForm.title.trim() || !createForm.openDate || isCreating || (createSource === 'custom' && !createForm.content.trim())"
                   @click="createMutation.mutate()"
                   class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >

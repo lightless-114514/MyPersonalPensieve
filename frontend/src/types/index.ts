@@ -203,7 +203,8 @@ export type CapsuleStatus = 'SEALED' | 'OPENED' | 'FORCED_OPEN'
 
 export interface TimeCapsule {
   id: string
-  memoryId: string
+  memoryId: string | null
+  content: string | null
   title: string
   openDate: string
   buriedDate: string
@@ -212,6 +213,7 @@ export interface TimeCapsule {
   isForced: boolean
   message: string | null
   memoryTitle: string | null
+  sourceType: 'memory' | 'custom'
   createdAt: string
   updatedAt: string
 }

@@ -301,7 +301,7 @@ function statusClass(status: CapsuleStatus) {
       >
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
           <PackageOpen class="w-5 h-5 text-emerald-500" />
-          胶囊内容
+          {{ capsule.sourceType === 'custom' ? '胶囊内容' : '关联记忆' }}
         </h2>
         <div class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
           {{ capsule.memoryContent }}

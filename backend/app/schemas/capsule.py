@@ -5,7 +5,8 @@ from typing import Optional
 
 class CapsuleCreateRequest(BaseModel):
     """创建时间胶囊请求"""
-    memory_id: str = Field(..., description="关联的日记ID")
+    memory_id: Optional[str] = Field(None, description="关联的日记ID（从记忆库选取时必填）")
+    content: Optional[str] = Field(None, description="胶囊自带内容（新建内容时必填）")
     title: str = Field(..., max_length=500, description="胶囊标题")
     open_date: datetime = Field(..., description="预定开启日期")
     message: Optional[str] = Field(None, description="给未来自己的一段话")
@@ -14,7 +15,8 @@ class CapsuleCreateRequest(BaseModel):
 class CapsuleResponse(BaseModel):
     """时间胶囊响应 — 列表用，不包含日记内容"""
     id: str
-    memory_id: str
+    memory_id: Optional[str] = None
+    content: Optional[str] = None
     title: str
     open_date: datetime
     buried_date: datetime
@@ -23,6 +25,7 @@ class CapsuleResponse(BaseModel):
     is_forced: bool = False
     message: Optional[str] = None
     memory_title: Optional[str] = None  # 关联日记标题（仅预览）
+    source_type: str = "memory"  # "memory" 或 "custom"
     created_at: datetime
     updated_at: datetime
 

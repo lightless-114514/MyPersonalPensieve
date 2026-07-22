@@ -21,10 +21,13 @@ class TimeCapsule(Base):
     __tablename__ = "time_capsules"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    memory_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("memories.id", ondelete="CASCADE"), nullable=False
+    memory_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("memories.id", ondelete="SET NULL"), nullable=True, comment="关联的日记ID（可选）"
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False, comment="胶囊标题")
+    content: Mapped[str | None] = mapped_column(
+        Text, nullable=True, comment="胶囊自带内容（不关联记忆库时使用）"
+    )
     open_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="预定开启日期")
     buried_date: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.now, comment="埋藏日期"

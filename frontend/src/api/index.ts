@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -266,13 +266,15 @@ export async function generateBirthdayWish() {
 // ---- Time Capsule APIs ----
 
 export async function createCapsule(payload: {
-  memoryId: string
+  memoryId?: string
+  content?: string
   title: string
   openDate: string
   message?: string
 }) {
   const { data } = await api.post<TimeCapsule>('/capsules', {
-    memory_id: payload.memoryId,
+    memory_id: payload.memoryId || null,
+    content: payload.content || null,
     title: payload.title,
     open_date: payload.openDate,
     message: payload.message || null,

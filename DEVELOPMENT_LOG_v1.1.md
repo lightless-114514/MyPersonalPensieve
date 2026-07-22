@@ -127,3 +127,68 @@ DELETE /api/capsules/{id}         删除
 
 - `CapsulePagedResponse.content` 类型从 `list` 修正为 `list[CapsuleResponse]`
 - `:disabled` 绑定中 `mutation.isPending`（Ref 类型）用 `!!` 转布尔值，修复 TS2322 错误
+
+---
+
+## 2026-07-22 — 时间胶囊双来源增强
+
+### 功能概述
+
+时间胶囊新增两种创建来源：「从记忆库选取」和「新建自定义内容」。选择记忆库的胶囊关联已有日记，选择新建内容的胶囊自带 `content` 字段，内容独立于记忆库，不会存入日记。
+
+### 架构设计
+
+**互斥模型**：`memory_id`（可选）和 `content`（可选）互斥——创建时必须提供其中之一，不可同时提供。通过后端 service 层校验 + 前端三步式引导确保数据一致性。
+
+**来源标识**：`source_type` 虚拟字段（`"memory"` / `"custom"`），由 service 层根据 `memory_id` 是否存在动态计算，不存入数据库。
+
+**级联保护**：外键 `ondelete` 从 `CASCADE` 改为 `SET NULL`——删除关联记忆时胶囊不被级联删除，仅断开关联。
+
+### 修改文件
+
+| 文件 | 改动 |
+|------|------|
+| `backend/app/models/capsule.py` | `memory_id` 改为 `nullable=True` + `ondelete="SET NULL"`；新增 `content` 字段（Text, nullable） |
+| `backend/app/schemas/capsule.py` | `CapsuleCreateRequest` 的 `memory_id`/`content` 改为 `Optional` 且互斥校验；`CapsuleResponse` 新增 `content`/`source_type` 字段 |
+| `backend/app/services/capsule_service.py` | `create` 方法分支：memory 模式查记忆、custom 模式直接存 content；`get_all`/`get_by_id` 返回 `source_type`；详情内容根据来源取值 |
+| `backend/alembic/env.py` | 添加 `TimeCapsule` 模型 import，确保 autogenerate 识别 |
+| `backend/alembic/versions/a635703a6b55_...py` | 迁移脚本：add content 列 + batch 重建表（memory_id 可空 + FK SET NULL） |
+| `frontend/src/types/index.ts` | `TimeCapsule` 接口 `memoryId` 改为 `string | null`；新增 `content`/`sourceType` 字段 |
+| `frontend/src/api/index.ts` | `createCapsule` payload `memoryId`/`content` 改为可选 |
+| `frontend/src/pages/CapsulePage.vue` | 创建弹窗重构为三步式：Step1 选来源（BookOpen/PenLine 图标卡片）→ Step2a 记忆列表选取 / Step2b 标题+内容输入 → Step3 开启日期+留言+封存 |
+| `frontend/src/pages/CapsuleDetailPage.vue` | 内容卡片标题根据 `sourceType` 动态显示（"记忆内容" / "胶囊内容"） |
+
+### 核心逻辑
+
+**创建流程**：
+1. Step1：用户选择来源（记忆库 / 新建内容）
+2. Step2a（记忆库）：展示最近日记列表，选中后进入 Step3
+3. Step2b（新建内容）：用户直接输入标题和内容，进入 Step3
+4. Step3：选择开启日期（最早明天）+ 可选留言 → 封存
+
+**后端校验**：
+- `memory_id` 和 `content` 均为空 → 400 "必须选择一篇记忆或输入胶囊内容"
+- `memory_id` 和 `content` 同时存在 → 400 "不能同时选择记忆和输入内容"
+
+**详情展示**：`source_type=memory` 时从关联记忆取内容，`source_type=custom` 时从胶囊自身 `content` 取内容。
+
+### 数据库迁移
+
+SQLite 不支持 `ALTER COLUMN` 和命名外键约束，迁移脚本使用原始 SQL 重建表方式：
+1. 备份原表 → 删除原表 → 创建新表（memory_id 可空 + FK SET NULL + content 列）→ 复制数据 → 删除备份
+2. 幂等处理：检查 `content` 列是否已存在（部分迁移状态兼容）
+
+### 后端 API 变更
+
+```
+POST /api/capsules
+  Request Body（变更）:
+    memory_id: string | null  （原：必填）
+    content: string | null    （原：无）
+    title: string             （不变）
+    open_date: datetime       （不变）
+    message: string | null    （不变）
+  Response Body（新增字段）:
+    content: string | null
+    source_type: "memory" | "custom"
+```

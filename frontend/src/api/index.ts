@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -271,13 +271,18 @@ export async function createCapsule(payload: {
   title: string
   openDate: string
   message?: string
+  file?: File
 }) {
-  const { data } = await api.post<TimeCapsule>('/capsules', {
-    memory_id: payload.memoryId || null,
-    content: payload.content || null,
-    title: payload.title,
-    open_date: payload.openDate,
-    message: payload.message || null,
+  const formData = new FormData()
+  if (payload.memoryId) formData.append('memory_id', payload.memoryId)
+  if (payload.content) formData.append('content', payload.content)
+  formData.append('title', payload.title)
+  formData.append('open_date', payload.openDate)
+  if (payload.message) formData.append('message', payload.message)
+  if (payload.file) formData.append('file', payload.file)
+
+  const { data } = await api.post<TimeCapsule>('/capsules', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data
 }
@@ -324,4 +329,10 @@ export async function forceOpenCapsule(capsuleId: string) {
 
 export async function deleteCapsule(capsuleId: string) {
   await api.delete(`/capsules/${capsuleId}`)
+}
+
+/** 获取胶囊关联图片的预览 URL */
+export function getCapsuleFileUrl(capsuleId: string) {
+  const base = API_BASE || '/api'
+  return `${base}/capsules/${capsuleId}/file`
 }

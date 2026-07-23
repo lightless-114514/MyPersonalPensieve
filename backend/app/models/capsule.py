@@ -16,6 +16,12 @@ class CapsuleStatus(str, enum.Enum):
     FORCED_OPEN = "FORCED_OPEN"  # 强行破拆
 
 
+class CapsuleContentType(str, enum.Enum):
+    """胶囊自定义内容类型"""
+    TEXT = "TEXT"    # 文字内容
+    IMAGE = "IMAGE"  # 图片内容
+
+
 class TimeCapsule(Base):
     """时间胶囊 — 将日记封存到未来某个日期"""
     __tablename__ = "time_capsules"
@@ -27,6 +33,19 @@ class TimeCapsule(Base):
     title: Mapped[str] = mapped_column(String(500), nullable=False, comment="胶囊标题")
     content: Mapped[str | None] = mapped_column(
         Text, nullable=True, comment="胶囊自带内容（不关联记忆库时使用）"
+    )
+    content_type: Mapped[str | None] = mapped_column(
+        String(10), nullable=True, default=CapsuleContentType.TEXT.value,
+        comment="自定义内容类型：TEXT 或 IMAGE"
+    )
+    file_path: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, comment="上传文件路径（图片类型时使用）"
+    )
+    file_size: Mapped[int | None] = mapped_column(
+        Integer, nullable=True, comment="文件大小（字节）"
+    )
+    mime_type: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, comment="文件 MIME 类型"
     )
     open_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="预定开启日期")
     buried_date: Mapped[datetime] = mapped_column(

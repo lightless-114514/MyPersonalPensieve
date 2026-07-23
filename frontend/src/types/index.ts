@@ -214,6 +214,10 @@ export interface TimeCapsule {
   message: string | null
   memoryTitle: string | null
   sourceType: 'memory' | 'custom'
+  contentType: 'TEXT' | 'IMAGE' | null
+  filePath: string | null
+  fileSize: number | null
+  mimeType: string | null
   createdAt: string
   updatedAt: string
 }

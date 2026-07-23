@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class CapsuleCreateRequest(BaseModel):
-    """创建时间胶囊请求"""
+    """创建时间胶囊请求（JSON 模式，不含文件上传）"""
     memory_id: Optional[str] = Field(None, description="关联的日记ID（从记忆库选取时必填）")
     content: Optional[str] = Field(None, description="胶囊自带内容（新建内容时必填）")
     title: str = Field(..., max_length=500, description="胶囊标题")
@@ -26,6 +26,10 @@ class CapsuleResponse(BaseModel):
     message: Optional[str] = None
     memory_title: Optional[str] = None  # 关联日记标题（仅预览）
     source_type: str = "memory"  # "memory" 或 "custom"
+    content_type: Optional[str] = None  # "TEXT" 或 "IMAGE"
+    file_path: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

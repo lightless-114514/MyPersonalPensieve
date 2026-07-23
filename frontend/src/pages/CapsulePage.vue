@@ -30,6 +30,8 @@ import {
   Sparkles,
   BookOpen,
   PenLine,
+  ImageIcon,
+  FileImage,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -78,6 +80,9 @@ watch([search, statusFilter], () => {
 // ---- Create Dialog ----
 const showCreate = ref(false)
 const createSource = ref<'memory' | 'custom' | ''>('') // 选择来源
+const createContentType = ref<'TEXT' | 'IMAGE'>('TEXT') // 自定义内容类型
+const imageFile = ref<File | null>(null) // 选中的图片文件
+const imagePreviewUrl = ref<string | null>(null) // 图片预览 URL
 const createForm = ref({
   memoryId: '',
   title: '',
@@ -113,6 +118,30 @@ function selectMemory(memoryId: string, memoryTitle: string) {
   createStep.value = 3
 }
 
+function handleImageSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    if (!file.type.startsWith('image/')) {
+      createError.value = '请选择图片文件'
+      return
+    }
+    imageFile.value = file
+    // 生成预览 URL
+    if (imagePreviewUrl.value) URL.revokeObjectURL(imagePreviewUrl.value)
+    imagePreviewUrl.value = URL.createObjectURL(file)
+    createError.value = ''
+  }
+}
+
+function clearImage() {
+  imageFile.value = null
+  if (imagePreviewUrl.value) {
+    URL.revokeObjectURL(imagePreviewUrl.value)
+    imagePreviewUrl.value = null
+  }
+}
+
 function goBackStep() {
   if (createStep.value === 3) {
     if (createSource.value === 'memory') {
@@ -124,6 +153,8 @@ function goBackStep() {
     }
   } else if (createStep.value === 2) {
     createSource.value = ''
+    createContentType.value = 'TEXT'
+    clearImage()
     createStep.value = 1
   }
 }
@@ -134,15 +165,19 @@ const isCreating = ref(false)
 const createMutation = useMutation({
   mutationFn: async () => {
     if (!createForm.value.openDate) throw new Error('请选择开启日期')
-    if (createSource.value === 'custom' && !createForm.value.content.trim()) throw new Error('请输入胶囊内容')
+    if (createSource.value === 'custom') {
+      if (createContentType.value === 'TEXT' && !createForm.value.content.trim()) throw new Error('请输入胶囊内容')
+      if (createContentType.value === 'IMAGE' && !imageFile.value) throw new Error('请选择一张图片')
+    }
     createError.value = ''
     isCreating.value = true
     return createCapsule({
       memoryId: createSource.value === 'memory' ? createForm.value.memoryId : undefined,
-      content: createSource.value === 'custom' ? createForm.value.content.trim() : undefined,
+      content: createSource.value === 'custom' && createContentType.value === 'TEXT' ? createForm.value.content.trim() : undefined,
       title: createForm.value.title,
       openDate: createForm.value.openDate + 'T00:00:00',
       message: createForm.value.message.trim() || undefined,
+      file: createSource.value === 'custom' && createContentType.value === 'IMAGE' ? imageFile.value! : undefined,
     })
   },
   onSuccess: () => {
@@ -165,6 +200,8 @@ const createMutation = useMutation({
 function resetCreateForm() {
   createForm.value = { memoryId: '', title: '', content: '', openDate: '', message: '' }
   createSource.value = ''
+  createContentType.value = 'TEXT'
+  clearImage()
   createStep.value = 1
   createError.value = ''
 }
@@ -533,8 +570,32 @@ const minDate = computed(() => {
                   class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
               </div>
-              <!-- Content -->
+
+              <!-- Content type toggle -->
               <div>
+                <label class="block text-sm font-medium mb-1.5">内容类型</label>
+                <div class="flex gap-2">
+                  <button
+                    @click="createContentType = 'TEXT'; clearImage()"
+                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all"
+                    :class="createContentType === 'TEXT' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/30'"
+                  >
+                    <PenLine class="w-4 h-4" />
+                    文字
+                  </button>
+                  <button
+                    @click="createContentType = 'IMAGE'; createForm.content = ''"
+                    class="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all"
+                    :class="createContentType === 'IMAGE' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:border-primary/30'"
+                  >
+                    <ImageIcon class="w-4 h-4" />
+                    图片
+                  </button>
+                </div>
+              </div>
+
+              <!-- Text content -->
+              <div v-if="createContentType === 'TEXT'">
                 <label class="block text-sm font-medium mb-1.5">胶囊内容</label>
                 <textarea
                   v-model="createForm.content"
@@ -542,6 +603,37 @@ const minDate = computed(() => {
                   placeholder="写下你想给未来自己的话..."
                   class="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 />
+              </div>
+
+              <!-- Image upload -->
+              <div v-if="createContentType === 'IMAGE'">
+                <label class="block text-sm font-medium mb-1.5">选择图片</label>
+                <div v-if="!imagePreviewUrl" class="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="handleImageSelect"
+                    class="hidden"
+                    id="capsule-image-input"
+                  />
+                  <label
+                    for="capsule-image-input"
+                    class="flex flex-col items-center justify-center w-full h-48 rounded-lg border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all"
+                  >
+                    <FileImage class="w-10 h-10 text-muted-foreground/40 mb-2" />
+                    <p class="text-sm text-muted-foreground">点击选择图片</p>
+                    <p class="text-xs text-muted-foreground/60 mt-1">支持 JPEG/PNG/GIF/WebP，最大 10MB</p>
+                  </label>
+                </div>
+                <div v-else class="relative rounded-lg overflow-hidden border border-border">
+                  <img :src="imagePreviewUrl" alt="预览" class="w-full max-h-64 object-contain bg-muted/20" />
+                  <button
+                    @click="clearImage"
+                    class="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  >
+                    <X class="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -554,8 +646,9 @@ const minDate = computed(() => {
               </div>
               <!-- Custom content summary -->
               <div v-if="createSource === 'custom'" class="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800/30">
-                <p class="text-xs text-muted-foreground mb-1">胶囊内容已填写</p>
-                <p class="text-sm font-medium truncate">{{ createForm.content.slice(0, 50) }}{{ createForm.content.length > 50 ? '...' : '' }}</p>
+                <p class="text-xs text-muted-foreground mb-1">{{ createContentType === 'IMAGE' ? '图片已选择' : '胶囊内容已填写' }}</p>
+                <p v-if="createContentType === 'TEXT'" class="text-sm font-medium truncate">{{ createForm.content.slice(0, 50) }}{{ createForm.content.length > 50 ? '...' : '' }}</p>
+                <img v-else-if="imagePreviewUrl" :src="imagePreviewUrl" alt="预览" class="max-h-32 rounded object-contain" />
               </div>
 
               <!-- Title -->
@@ -614,7 +707,7 @@ const minDate = computed(() => {
                 </button>
                 <button
                   v-if="createStep === 2 && createSource === 'custom'"
-                  :disabled="!createForm.title.trim() || !createForm.content.trim() || isCreating"
+                  :disabled="!createForm.title.trim() || (createContentType === 'TEXT' && !createForm.content.trim()) || (createContentType === 'IMAGE' && !imageFile) || isCreating"
                   @click="createStep = 3"
                   class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
@@ -622,7 +715,7 @@ const minDate = computed(() => {
                 </button>
                 <button
                   v-if="createStep === 3"
-                  :disabled="!createForm.title.trim() || !createForm.openDate || isCreating || (createSource === 'custom' && !createForm.content.trim())"
+                  :disabled="!createForm.title.trim() || !createForm.openDate || isCreating || (createSource === 'custom' && createContentType === 'TEXT' && !createForm.content.trim()) || (createSource === 'custom' && createContentType === 'IMAGE' && !imageFile)"
                   @click="createMutation.mutate()"
                   class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >

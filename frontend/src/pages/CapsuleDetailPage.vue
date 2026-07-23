@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { useRoute, useRouter } from 'vue-router'
-import { getCapsuleDetail, openCapsule, forceOpenCapsule, deleteCapsule } from '@/api'
+import { getCapsuleDetail, openCapsule, forceOpenCapsule, deleteCapsule, getCapsuleFileUrl } from '@/api'
 import type { CapsuleStatus } from '@/types'
 import {
   Hourglass,
@@ -296,14 +296,23 @@ function statusClass(status: CapsuleStatus) {
 
       <!-- Content Card (only when opened) -->
       <div
-        v-if="capsule.status !== 'SEALED' && capsule.memoryContent"
+        v-if="capsule.status !== 'SEALED' && (capsule.memoryContent || capsule.contentType === 'IMAGE')"
         class="rounded-xl border border-border bg-card shadow-card p-6 animate-fade-in"
       >
         <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
           <PackageOpen class="w-5 h-5 text-emerald-500" />
           {{ capsule.sourceType === 'custom' ? '胶囊内容' : '关联记忆' }}
         </h2>
-        <div class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+        <!-- Image content -->
+        <div v-if="capsule.contentType === 'IMAGE' && capsule.filePath" class="flex justify-center">
+          <img
+            :src="getCapsuleFileUrl(capsule.id)"
+            alt="胶囊图片"
+            class="max-w-full max-h-96 rounded-lg object-contain"
+          />
+        </div>
+        <!-- Text content -->
+        <div v-else-if="capsule.memoryContent" class="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
           {{ capsule.memoryContent }}
         </div>
       </div>

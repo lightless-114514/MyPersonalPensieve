@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import selectinload
 
-from app.models.capsule import TimeCapsule, CapsuleStatus
+from app.models.capsule import TimeCapsule, CapsuleStatus, CapsuleContentType
 from app.models.memory import Memory
 from app.schemas.capsule import (
     CapsuleCreateRequest,
@@ -29,16 +29,24 @@ def _ensure_naive(dt: datetime) -> datetime:
 class CapsuleService:
     """时间胶囊服务"""
 
-    async def create(self, db: AsyncSession, req: CapsuleCreateRequest) -> CapsuleResponse:
+    async def create(
+        self,
+        db: AsyncSession,
+        req: CapsuleCreateRequest,
+        file_path: str | None = None,
+        file_size: int | None = None,
+        mime_type: str | None = None,
+    ) -> CapsuleResponse:
         """创建时间胶囊"""
         # 验证：必须提供 memory_id 或 content 之一
-        if not req.memory_id and not req.content:
-            raise ValueError("必须选择一篇记忆或输入胶囊内容")
-        if req.memory_id and req.content:
-            raise ValueError("不能同时选择记忆和输入内容")
+        if not req.memory_id and not req.content and not file_path:
+            raise ValueError("必须选择一篇记忆、输入内容或上传图片")
+        if req.memory_id and (req.content or file_path):
+            raise ValueError("不能同时选择记忆和输入/上传内容")
 
         memory_title = None
         source_type = "custom"
+        content_type = CapsuleContentType.TEXT.value
 
         # 如果从记忆库选取，验证记忆存在
         if req.memory_id:
@@ -47,6 +55,9 @@ class CapsuleService:
                 raise ValueError("关联的日记不存在")
             memory_title = memory.title
             source_type = "memory"
+        elif file_path:
+            # 图片类型胶囊
+            content_type = CapsuleContentType.IMAGE.value
 
         # 将时区感知datetime转为naive，确保与 datetime.now() 兼容比较
         open_date = _ensure_naive(req.open_date)
@@ -62,6 +73,10 @@ class CapsuleService:
             open_date=open_date,
             message=req.message,
             status=CapsuleStatus.SEALED,
+            content_type=content_type,
+            file_path=file_path,
+            file_size=file_size,
+            mime_type=mime_type,
         )
         db.add(capsule)
         await db.commit()
@@ -80,6 +95,10 @@ class CapsuleService:
             message=capsule.message,
             memory_title=memory_title,
             source_type=source_type,
+            content_type=capsule.content_type,
+            file_path=capsule.file_path,
+            file_size=capsule.file_size,
+            mime_type=capsule.mime_type,
             created_at=capsule.created_at,
             updated_at=capsule.updated_at,
         )
@@ -166,6 +185,10 @@ class CapsuleService:
                 message=c.message,
                 memory_title=c.memory.title if c.memory else None,
                 source_type="memory" if c.memory_id else "custom",
+                content_type=c.content_type,
+                file_path=c.file_path,
+                file_size=c.file_size,
+                mime_type=c.mime_type,
                 created_at=c.created_at,
                 updated_at=c.updated_at,
             ))
@@ -194,8 +217,12 @@ class CapsuleService:
             if capsule.memory:
                 memory_content = capsule.memory.content
                 memory_type = capsule.memory.type.value
+            elif capsule.content_type == CapsuleContentType.IMAGE.value:
+                # 图片类型胶囊 — 返回标记
+                memory_content = "[图片]"
+                memory_type = "IMAGE"
             elif capsule.content:
-                # 自带内容的胶囊
+                # 文字类型自定义胶囊
                 memory_content = capsule.content
                 memory_type = "TEXT"
 
@@ -212,6 +239,10 @@ class CapsuleService:
             message=capsule.message,
             memory_title=capsule.memory.title if capsule.memory else None,
             source_type="memory" if capsule.memory_id else "custom",
+            content_type=capsule.content_type,
+            file_path=capsule.file_path,
+            file_size=capsule.file_size,
+            mime_type=capsule.mime_type,
             memory_content=memory_content,
             memory_type=memory_type,
             created_at=capsule.created_at,

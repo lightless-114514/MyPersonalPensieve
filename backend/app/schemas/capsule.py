@@ -30,6 +30,7 @@ class CapsuleResponse(BaseModel):
     file_path: Optional[str] = None
     file_size: Optional[int] = None
     mime_type: Optional[str] = None
+    big_tag: Optional[str] = None  # 关联记忆的大标签
     created_at: datetime
     updated_at: datetime
 

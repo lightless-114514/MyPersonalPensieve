@@ -218,6 +218,7 @@ export interface TimeCapsule {
   filePath: string | null
   fileSize: number | null
   mimeType: string | null
+  bigTag: BigTagCategory | null
   createdAt: string
   updatedAt: string
 }

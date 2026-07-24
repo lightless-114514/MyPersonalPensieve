@@ -81,10 +81,11 @@ async def get_capsules(
     size: int = Query(5, ge=1, le=50),
     status: Optional[str] = Query(None, description="按状态过滤: SEALED / OPENED / FORCED_OPEN"),
     search: Optional[str] = Query(None, description="搜索标题或留言"),
+    big_tag: Optional[str] = Query(None, description="按大标签过滤: KNOWLEDGE_POINT / FREEFORM_NOTE / INSPIRATION_FLASH / DECISION_DILEMMA"),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取胶囊列表（分页+搜索）"""
-    return await capsule_service.get_all(db, page, size, status, search)
+    """获取胶囊列表（分页+搜索+大标签筛选）"""
+    return await capsule_service.get_all(db, page, size, status, search, big_tag)
 
 
 @router.get("/{capsule_id}", response_model=CapsuleDetailResponse)

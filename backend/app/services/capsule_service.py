@@ -5,7 +5,7 @@ from sqlalchemy import select, func, and_, or_
 from sqlalchemy.orm import selectinload
 
 from app.models.capsule import TimeCapsule, CapsuleStatus, CapsuleContentType
-from app.models.memory import Memory
+from app.models.memory import Memory, BigTag
 from app.schemas.capsule import (
     CapsuleCreateRequest,
     CapsuleResponse,
@@ -47,6 +47,7 @@ class CapsuleService:
         memory_title = None
         source_type = "custom"
         content_type = CapsuleContentType.TEXT.value
+        big_tag = None
 
         # 如果从记忆库选取，验证记忆存在
         if req.memory_id:
@@ -55,6 +56,7 @@ class CapsuleService:
                 raise ValueError("关联的日记不存在")
             memory_title = memory.title
             source_type = "memory"
+            big_tag = memory.big_tag.value if memory.big_tag else None
         elif file_path:
             # 图片类型胶囊
             content_type = CapsuleContentType.IMAGE.value
@@ -99,6 +101,7 @@ class CapsuleService:
             file_path=capsule.file_path,
             file_size=capsule.file_size,
             mime_type=capsule.mime_type,
+            big_tag=big_tag,  # 从关联记忆获取
             created_at=capsule.created_at,
             updated_at=capsule.updated_at,
         )
@@ -138,8 +141,9 @@ class CapsuleService:
         size: int = 5,
         status: str | None = None,
         search: str | None = None,
+        big_tag: str | None = None,
     ) -> CapsulePagedResponse:
-        """获取胶囊列表（分页+搜索）"""
+        """获取胶囊列表（分页+搜索+大标签筛选）"""
         query = select(TimeCapsule).options(selectinload(TimeCapsule.memory))
 
         if status:
@@ -150,6 +154,14 @@ class CapsuleService:
                     TimeCapsule.title.ilike(f"%{search}%"),
                     TimeCapsule.message.ilike(f"%{search}%"),
                 )
+            )
+        if big_tag:
+            query = query.where(
+                TimeCapsule.memory_id.isnot(None)
+            ).join(
+                Memory, TimeCapsule.memory_id == Memory.id
+            ).where(
+                Memory.big_tag == BigTag(big_tag)
             )
 
         # 总数
@@ -162,6 +174,14 @@ class CapsuleService:
                     TimeCapsule.title.ilike(f"%{search}%"),
                     TimeCapsule.message.ilike(f"%{search}%"),
                 )
+            )
+        if big_tag:
+            count_query = count_query.where(
+                TimeCapsule.memory_id.isnot(None)
+            ).join(
+                Memory, TimeCapsule.memory_id == Memory.id
+            ).where(
+                Memory.big_tag == BigTag(big_tag)
             )
         total = await db.scalar(count_query) or 0
 
@@ -189,6 +209,7 @@ class CapsuleService:
                 file_path=c.file_path,
                 file_size=c.file_size,
                 mime_type=c.mime_type,
+                big_tag=c.memory.big_tag.value if c.memory and c.memory.big_tag else None,
                 created_at=c.created_at,
                 updated_at=c.updated_at,
             ))
@@ -243,6 +264,7 @@ class CapsuleService:
             file_path=capsule.file_path,
             file_size=capsule.file_size,
             mime_type=capsule.mime_type,
+            big_tag=capsule.memory.big_tag.value if capsule.memory and capsule.memory.big_tag else None,
             memory_content=memory_content,
             memory_type=memory_type,
             created_at=capsule.created_at,

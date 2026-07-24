@@ -33,6 +33,8 @@ import {
   ImageIcon,
   FileImage,
 } from 'lucide-vue-next'
+import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
+import type { BigTagCategory } from '@/types'
 
 const router = useRouter()
 const queryClient = useQueryClient()
@@ -48,16 +50,18 @@ const { data: stats } = useQuery({
 const page = ref(0)
 const search = ref('')
 const statusFilter = ref<CapsuleStatus | ''>('')
+const bigTagFilter = ref<BigTagCategory | ''>('')
 const pageSize = 5
 
 const { data: capsuleData, isLoading } = useQuery({
-  queryKey: computed(() => ['capsules', page, search, statusFilter]),
+  queryKey: computed(() => ['capsules', page, search, statusFilter, bigTagFilter]),
   queryFn: () =>
     getCapsules({
       page: page.value,
       size: pageSize,
       status: statusFilter.value || undefined,
       search: search.value.trim() || undefined,
+      bigTag: bigTagFilter.value || undefined,
     }),
 })
 
@@ -73,7 +77,7 @@ function nextPage() {
 }
 
 // Reset page when filter/search changes
-watch([search, statusFilter], () => {
+watch([search, statusFilter, bigTagFilter], () => {
   page.value = 0
 })
 
@@ -376,6 +380,27 @@ const minDate = computed(() => {
       </button>
     </div>
 
+    <!-- Big Tag filter -->
+    <div class="flex flex-wrap gap-2">
+      <button
+        @click="bigTagFilter = ''"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all duration-200"
+        :class="!bigTagFilter ? 'bg-primary/10 text-primary border-primary/30 shadow-sm' : 'border-muted bg-background text-muted-foreground hover:border-border'"
+      >
+        全部
+      </button>
+      <button
+        v-for="opt in BIG_TAG_OPTIONS"
+        :key="opt.value"
+        @click="bigTagFilter = bigTagFilter === opt.value ? '' : opt.value"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all duration-200"
+        :class="bigTagFilter === opt.value ? bigTagClass(opt.value) + ' shadow-sm' : 'border-muted bg-background text-muted-foreground hover:border-border'"
+      >
+        <component :is="opt.icon" class="w-3.5 h-3.5" />
+        <span>{{ opt.label }}</span>
+      </button>
+    </div>
+
     <!-- Capsule List -->
     <div v-if="isLoading" class="flex justify-center py-12">
       <Loader2 class="w-6 h-6 animate-spin text-muted-foreground" />
@@ -409,13 +434,20 @@ const minDate = computed(() => {
 
           <div class="flex-1 min-w-0">
             <!-- Title row -->
-            <div class="flex items-center gap-2 mb-1">
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
               <h3 class="font-semibold text-sm truncate">{{ capsule.title }}</h3>
               <span
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0"
                 :class="statusClass(capsule.status)"
               >
                 {{ statusLabel(capsule.status) }}
+              </span>
+              <span
+                v-if="capsule.bigTag"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0"
+                :class="bigTagClass(capsule.bigTag)"
+              >
+                {{ bigTagLabel(capsule.bigTag) }}
               </span>
             </div>
 

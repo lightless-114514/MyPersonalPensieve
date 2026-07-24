@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -307,6 +307,7 @@ export async function getCapsules(params: {
   size?: number
   status?: string
   search?: string
+  bigTag?: string
 }) {
   const { data } = await api.get<CapsulePagedResult>('/capsules', { params })
   return data

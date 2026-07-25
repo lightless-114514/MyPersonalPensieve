@@ -8,6 +8,7 @@ import {
   createCapsule,
   deleteCapsule,
   getRecentMemories,
+  getTags,
 } from '@/api'
 import { formatDate } from '@/lib/utils'
 import type { CapsuleStatus } from '@/types'
@@ -34,7 +35,7 @@ import {
   FileImage,
 } from 'lucide-vue-next'
 import { BIG_TAG_OPTIONS, bigTagClass, bigTagLabel } from '@/lib/utils'
-import type { BigTagCategory } from '@/types'
+import type { BigTagCategory, TagItem } from '@/types'
 
 const router = useRouter()
 const queryClient = useQueryClient()
@@ -97,18 +98,68 @@ const createForm = ref({
 const createStep = ref(1) // 1=选择来源, 2=选择日记(记忆库模式)或填写内容(新建模式), 3=填写信息
 
 const { data: recentMemories } = useQuery({
-  queryKey: ['recent-memories-for-capsule'],
-  queryFn: () => getRecentMemories(50),
+  queryKey: ['recent-memories-for-capsule', computed(() => ({
+    show: showCreate.value,
+    source: createSource.value,
+    bigTag: memoryBigTagFilter.value,
+    tags: memorySmallTagFilter.value,
+  }))],
+  queryFn: () => getRecentMemories(
+    50,
+    memoryBigTagFilter.value || undefined,
+    memorySmallTagFilter.value.length > 0 ? memorySmallTagFilter.value.join(',') : undefined,
+  ),
   enabled: computed(() => showCreate.value && createSource.value === 'memory'),
+})
+
+// ---- Memory selection tag filters ----
+const memoryBigTagFilter = ref<BigTagCategory | ''>('')
+const memorySmallTagFilter = ref<string[]>([])
+const tagSearch = ref('')
+const tagPage = ref(0)
+const tagPageSize = 5
+
+const { data: tagData } = useQuery({
+  queryKey: computed(() => ['tags-for-capsule', tagSearch, tagPage]),
+  queryFn: () => getTags(tagSearch.value.trim() || undefined, tagPage.value, tagPageSize),
+  enabled: computed(() => showCreate.value && createSource.value === 'memory'),
+})
+
+const tagItems = computed(() => tagData.value?.content ?? [])
+const tagTotalPages = computed(() => tagData.value?.totalPages ?? 0)
+const tagTotalElements = computed(() => tagData.value?.totalElements ?? 0)
+
+function toggleSmallTag(tag: string) {
+  const idx = memorySmallTagFilter.value.indexOf(tag)
+  if (idx >= 0) {
+    memorySmallTagFilter.value.splice(idx, 1)
+  } else {
+    memorySmallTagFilter.value.push(tag)
+  }
+}
+
+function prevTagPage() {
+  if (tagPage.value > 0) tagPage.value--
+}
+function nextTagPage() {
+  if (tagPage.value < tagTotalPages.value - 1) tagPage.value++
+}
+
+// Reset tag page when search changes
+watch(tagSearch, () => {
+  tagPage.value = 0
 })
 
 const filteredMemories = computed(() => {
   const list = recentMemories.value ?? []
   const q = createForm.value.title.trim().toLowerCase()
-  if (!q) return list
-  return list.filter(
-    (m) => m.title.toLowerCase().includes(q) || m.content.toLowerCase().includes(q)
-  )
+  let result = list
+  if (q) {
+    result = result.filter(
+      (m) => m.title.toLowerCase().includes(q) || m.content.toLowerCase().includes(q)
+    )
+  }
+  return result
 })
 
 function selectSource(source: 'memory' | 'custom') {
@@ -208,6 +259,10 @@ function resetCreateForm() {
   clearImage()
   createStep.value = 1
   createError.value = ''
+  memoryBigTagFilter.value = ''
+  memorySmallTagFilter.value = []
+  tagSearch.value = ''
+  tagPage.value = 0
 }
 
 function closeCreateDialog() {
@@ -576,18 +631,140 @@ const minDate = computed(() => {
             <!-- Step 2: Select Memory (memory mode) or Write Content (custom mode) -->
             <div v-if="createStep === 2 && createSource === 'memory'" class="flex-1 overflow-y-auto p-5 space-y-3">
               <p class="text-sm text-muted-foreground mb-3">选择一篇记忆作为胶囊内容：</p>
-              <div
-                v-for="m in filteredMemories"
-                :key="m.id"
-                @click="selectMemory(m.id, m.title)"
-                class="p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all"
-              >
-                <h4 class="text-sm font-medium truncate">{{ m.title }}</h4>
-                <p class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ m.content }}</p>
-                <p class="text-[10px] text-muted-foreground/50 mt-1">{{ formatDate(m.createdAt || m.created_at) }}</p>
+
+              <!-- Big Tag filter for memory selection -->
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-muted-foreground">按大标签筛选</p>
+                <div class="flex flex-wrap gap-1.5">
+                  <button
+                    @click="memoryBigTagFilter = ''"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border-2 transition-all duration-200"
+                    :class="!memoryBigTagFilter ? 'bg-primary/10 text-primary border-primary/30 shadow-sm' : 'border-muted bg-background text-muted-foreground hover:border-border'"
+                  >
+                    全部
+                  </button>
+                  <button
+                    v-for="opt in BIG_TAG_OPTIONS"
+                    :key="opt.value"
+                    @click="memoryBigTagFilter = memoryBigTagFilter === opt.value ? '' : opt.value"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border-2 transition-all duration-200"
+                    :class="memoryBigTagFilter === opt.value ? bigTagClass(opt.value) + ' shadow-sm' : 'border-muted bg-background text-muted-foreground hover:border-border'"
+                  >
+                    <component :is="opt.icon" class="w-3 h-3" />
+                    <span>{{ opt.label }}</span>
+                  </button>
+                </div>
               </div>
-              <div v-if="filteredMemories.length === 0" class="text-center py-8 text-muted-foreground text-sm">
-                暂无记忆可选，请先创建一篇记忆
+
+              <!-- Small Tag filter for memory selection -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <p class="text-xs font-medium text-muted-foreground">按小标签筛选</p>
+                  <span v-if="memorySmallTagFilter.length > 0" class="text-[10px] text-primary">已选 {{ memorySmallTagFilter.length }} 个</span>
+                </div>
+                <!-- Tag search -->
+                <div class="relative">
+                  <Search class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    v-model="tagSearch"
+                    type="text"
+                    placeholder="搜索标签..."
+                    class="w-full pl-8 pr-3 py-1.5 rounded-md border border-input bg-background text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                </div>
+                <!-- Tag chips -->
+                <div class="flex flex-wrap gap-1.5 min-h-[32px]">
+                  <button
+                    v-for="item in tagItems"
+                    :key="item.tag"
+                    @click="toggleSmallTag(item.tag)"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-all duration-200"
+                    :class="memorySmallTagFilter.includes(item.tag) ? 'bg-primary/15 text-primary border-primary/40 shadow-sm' : 'border-border bg-background text-muted-foreground hover:border-primary/30 hover:bg-primary/5'"
+                  >
+                    <span>{{ item.tag }}</span>
+                    <span class="text-[10px] opacity-60">{{ item.count }}</span>
+                  </button>
+                  <div v-if="tagItems.length === 0" class="text-xs text-muted-foreground/60 py-1">
+                    {{ tagSearch ? '未找到匹配的标签' : '暂无标签' }}
+                  </div>
+                </div>
+                <!-- Tag pagination -->
+                <div v-if="tagTotalPages > 1" class="flex items-center justify-between">
+                  <span class="text-[10px] text-muted-foreground">共 {{ tagTotalElements }} 个标签</span>
+                  <div class="flex items-center gap-1">
+                    <button
+                      :disabled="tagPage === 0"
+                      @click="prevTagPage"
+                      class="p-1 rounded border border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronLeft class="w-3 h-3" />
+                    </button>
+                    <span class="text-[10px] text-muted-foreground">{{ tagPage + 1 }}/{{ tagTotalPages }}</span>
+                    <button
+                      :disabled="tagPage >= tagTotalPages - 1"
+                      @click="nextTagPage"
+                      class="p-1 rounded border border-border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ChevronRight class="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                <!-- Selected tags display -->
+                <div v-if="memorySmallTagFilter.length > 0" class="flex flex-wrap gap-1.5 pt-1 border-t border-border/50">
+                  <span class="text-[10px] text-muted-foreground leading-6">已选:</span>
+                  <span
+                    v-for="tag in memorySmallTagFilter"
+                    :key="tag"
+                    class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/15 text-primary"
+                  >
+                    {{ tag }}
+                    <button @click="toggleSmallTag(tag)" class="hover:text-red-500 transition-colors">
+                      <X class="w-2.5 h-2.5" />
+                    </button>
+                  </span>
+                  <button
+                    @click="memorySmallTagFilter = []"
+                    class="text-[10px] text-muted-foreground hover:text-red-500 transition-colors ml-1"
+                  >
+                    清空
+                  </button>
+                </div>
+              </div>
+
+              <!-- Memory list -->
+              <div class="space-y-2 pt-1">
+                <div
+                  v-for="m in filteredMemories"
+                  :key="m.id"
+                  @click="selectMemory(m.id, m.title)"
+                  class="p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all"
+                >
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-sm font-medium truncate flex-1">{{ m.title }}</h4>
+                    <span
+                      v-if="m.bigTag"
+                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-medium shrink-0"
+                      :class="bigTagClass(m.bigTag)"
+                    >
+                      {{ bigTagLabel(m.bigTag) }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ m.content }}</p>
+                  <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <span v-if="m.tags && m.tags.length > 0" class="flex items-center gap-1 flex-wrap">
+                      <span
+                        v-for="t in m.tags.slice(0, 3)"
+                        :key="t"
+                        class="inline-flex items-center px-1.5 py-0 rounded text-[9px] bg-muted text-muted-foreground"
+                      >{{ t }}</span>
+                      <span v-if="m.tags.length > 3" class="text-[9px] text-muted-foreground">+{{ m.tags.length - 3 }}</span>
+                    </span>
+                    <span class="text-[10px] text-muted-foreground/50 ml-auto">{{ formatDate(m.createdAt || m.created_at) }}</span>
+                  </div>
+                </div>
+                <div v-if="filteredMemories.length === 0" class="text-center py-8 text-muted-foreground text-sm">
+                  {{ (memoryBigTagFilter || memorySmallTagFilter.length > 0) ? '没有符合条件的记忆' : '暂无记忆可选，请先创建一篇记忆' }}
+                </div>
               </div>
             </div>
 

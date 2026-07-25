@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import axios from 'axios'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   Memory,
@@ -7,6 +7,7 @@ import type {
   SentimentTrend,
   ProcessingProgress,
   TagItem,
+  TagPagedResult,
   HeatmapDay,
   WordCloudItem,
   StatsSummary,
@@ -100,8 +101,8 @@ export async function getMemories(params: { page?: number; size?: number; favori
   return data
 }
 
-export async function getRecentMemories(limit: number = 10) {
-  const { data } = await api.get<Memory[]>('/memories/recent', { params: { limit } })
+export async function getRecentMemories(limit: number = 10, bigTag?: string, tags?: string) {
+  const { data } = await api.get<Memory[]>('/memories/recent', { params: { limit, big_tag: bigTag || undefined, tags: tags || undefined } })
   return data
 }
 
@@ -127,8 +128,8 @@ export async function deleteMemory(id: string) {
   await api.delete(`/memories/${id}`)
 }
 
-export async function getTags(q?: string, limit?: number) {
-  const { data } = await api.get<TagItem[]>('/memories/tags', { params: { q, limit } })
+export async function getTags(q?: string, page?: number, size?: number) {
+  const { data } = await api.get<TagPagedResult>('/memories/tags', { params: { q, page, size } })
   return data
 }
 

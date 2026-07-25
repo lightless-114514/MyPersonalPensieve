@@ -50,6 +50,14 @@ export interface TagItem {
   count: number
 }
 
+export interface TagPagedResult {
+  content: TagItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface SearchResult {
   content: Memory[]
   total_elements: number

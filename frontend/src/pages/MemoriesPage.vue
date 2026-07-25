@@ -39,13 +39,13 @@ const tagBlurTimer = ref<number | null>(null)
 
 const { data: allTags } = useQuery({
   queryKey: ['tags'],
-  queryFn: () => getTags(void 0, 100),
+  queryFn: () => getTags(undefined, 0, 100),
   placeholderData: (prev: any) => prev,
   staleTime: 30_000,
 })
 
 const suggestions = computed(() => {
-  const tags = allTags.value
+  const tags = allTags.value?.content
   if (!tags || tags.length === 0) return []
   const q = tagText.value.trim().toLowerCase()
   let filtered = tags.filter((t: any) => !selectedTags.value.includes(t.tag))

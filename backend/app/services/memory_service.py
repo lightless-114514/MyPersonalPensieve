@@ -177,7 +177,35 @@ class MemoryService:
             first=page == 0,
         )
 
-    async def get_recent(self, db: AsyncSession, limit: int = 10) -> list[MemoryResponse]:
+    async def get_recent(self, db: AsyncSession, limit: int = 10, big_tag: str | None = None, tags: str | None = None) -> list[MemoryResponse]:
+        # 当有过滤条件时，不走缓存，直接查询
+        if big_tag or tags:
+            query = (
+                select(Memory)
+                .options(selectinload(Memory.tags))
+                .order_by(desc(Memory.created_at))
+                .limit(limit)
+            )
+            if big_tag:
+                try:
+                    big_tag_enum = BigTag(big_tag)
+                    query = query.where(Memory.big_tag == big_tag_enum)
+                except ValueError:
+                    pass
+            if tags:
+                tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+                if tag_list:
+                    # 子查询：查找包含所有指定标签的记忆（AND 关系）
+                    for tag in tag_list:
+                        query = query.where(
+                            Memory.id.in_(
+                                select(MemoryTag.memory_id).where(MemoryTag.tag == tag)
+                            )
+                        )
+            result = await db.execute(query)
+            memories = result.scalars().all()
+            return [self._to_response(m) for m in memories]
+
         cached = await redis_service.get_recent_memories()
         if cached:
             try:

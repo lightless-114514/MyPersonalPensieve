@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿<script setup lang="ts">
 import { ref, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
@@ -90,13 +90,13 @@ function closeEditTagDropdown() {
 
 const { data: allTags } = useQuery({
   queryKey: ['tags'],
-  queryFn: () => getTags(void 0, 100),
+  queryFn: () => getTags(undefined, 0, 100),
   placeholderData: (prev: any) => prev,
   staleTime: 30_000,
 })
 
 const editSuggestions = computed(() => {
-  const tags = allTags.value
+  const tags = allTags.value?.content
   if (!tags || tags.length === 0) return []
   const q = editTagText.value.trim().toLowerCase()
   let filtered = tags.filter((t: any) => !editForm.value.tags.includes(t.tag))

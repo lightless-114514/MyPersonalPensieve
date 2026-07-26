@@ -97,6 +97,13 @@ const createForm = ref({
 })
 const createStep = ref(1) // 1=选择来源, 2=选择日记(记忆库模式)或填写内容(新建模式), 3=填写信息
 
+// ---- Memory selection tag filters (must be declared before useQuery that references them) ----
+const memoryBigTagFilter = ref<BigTagCategory | ''>('')
+const memorySmallTagFilter = ref<string[]>([])
+const tagSearch = ref('')
+const tagPage = ref(0)
+const tagPageSize = 5
+
 const { data: recentMemories } = useQuery({
   queryKey: ['recent-memories-for-capsule', computed(() => ({
     show: showCreate.value,
@@ -111,13 +118,6 @@ const { data: recentMemories } = useQuery({
   ),
   enabled: computed(() => showCreate.value && createSource.value === 'memory'),
 })
-
-// ---- Memory selection tag filters ----
-const memoryBigTagFilter = ref<BigTagCategory | ''>('')
-const memorySmallTagFilter = ref<string[]>([])
-const tagSearch = ref('')
-const tagPage = ref(0)
-const tagPageSize = 5
 
 const { data: tagData } = useQuery({
   queryKey: computed(() => ['tags-for-capsule', tagSearch, tagPage]),

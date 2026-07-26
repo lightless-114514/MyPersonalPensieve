@@ -192,3 +192,41 @@ POST /api/capsules
     content: string | null
     source_type: "memory" | "custom"
 ```
+
+---
+
+## 2026-07-26 — 时间胶囊页面白屏修复
+
+### 问题描述
+
+时间胶囊页面（`/capsules`）白屏崩溃，其他页面正常。浏览器控制台报 `ReferenceError: Cannot access 'memoryBigTagFilter' before initialization`。
+
+### 根因分析
+
+`CapsulePage.vue` 中 `memoryBigTagFilter` 和 `memorySmallTagFilter` 的 `ref` 声明位于 `useQuery` 调用之后（原第116-117行），但 `useQuery` 的 `queryKey` 中 `computed` 会在 setup 阶段立即被 `watchEffect` 追踪，此时变量尚未声明，触发 TDZ（暂时性死区）错误，导致组件崩溃白屏。
+
+此问题由 commit `68b1281`（"feat: 时间胶囊选择记忆新增小标签筛选功能"）引入——该提交在 `useQuery` 之后追加了筛选变量声明，未注意声明顺序。
+
+### 修复内容
+
+将以下5个变量声明从 `useQuery` 之后移至 `useQuery` 之前：
+
+| 变量 | 类型 | 用途 |
+|------|------|------|
+| `memoryBigTagFilter` | `Ref<BigTagCategory \| ''>` | 大标签筛选 |
+| `memorySmallTagFilter` | `Ref<string[]>` | 小标签筛选 |
+| `tagSearch` | `Ref<string>` | 标签搜索 |
+| `tagPage` | `Ref<number>` | 标签分页页码 |
+| `tagPageSize` | `number` | 标签每页条数 |
+
+### 附带修复
+
+- `vite.config.ts` / `vite.config.js`：proxy target 从 `http://localhost:8000` 改为 `http://127.0.0.1:8000`，解决 Node.js IPv6 优先导致 ECONNREFUSED 的问题
+
+### 修改文件
+
+| 文件 | 改动 |
+|------|------|
+| `frontend/src/pages/CapsulePage.vue` | 变量声明顺序调整：5个筛选变量移至 `useQuery` 之前 |
+| `frontend/vite.config.ts` | proxy target 改为 `127.0.0.1:8000` |
+| `frontend/vite.config.js` | 同步修改编译输出文件 |

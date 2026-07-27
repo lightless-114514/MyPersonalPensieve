@@ -195,6 +195,40 @@ POST /api/capsules
 
 ---
 
+## 2026-07-25 — 时间胶囊选择记忆新增大小标签筛选
+
+### 功能概述
+
+时间胶囊创建流程中「从记忆库选取」步骤新增标签筛选能力：大标签（BigTagCategory）一键过滤 + 小标签搜索/多选 + 分页浏览，帮助用户快速定位目标记忆。
+
+### 修改文件
+
+| 文件 | 改动 |
+|------|------|
+| `frontend/src/pages/CapsulePage.vue` | 新增 `memoryBigTagFilter`/`memorySmallTagFilter`/`tagSearch`/`tagPage`/`tagPageSize` 响应式变量；新增 `useQuery` 查询标签列表（`getTags`）；记忆列表 `useQuery` 的 `queryKey`/`queryFn` 加入大标签和小标签过滤参数；新增 `toggleSmallTag`/`prevTagPage`/`nextTagPage` 交互函数；`watch(tagSearch)` 重置分页；模板中大标签按钮组 + 小标签搜索框 + 分页控件 + 已选标签展示 |
+| `frontend/src/api/index.ts` | `getRecentMemories` 新增 `bigTag`/`tags` 可选参数，传递 `big_tag`/`tags` query params |
+
+### 后端 API 变更
+
+```
+GET /api/memories/recent
+  新增 Query Params:
+    big_tag: string (可选) — 按大标签过滤
+    tags:    string (可选) — 按小标签过滤，逗号分隔
+
+GET /api/memories/tags（已有，复用）
+  支持搜索(q) + 分页(page/size)，返回 {content, page, size, total_elements, total_pages}
+```
+
+### 交互设计
+
+- **大标签筛选**：横向按钮组，点击切换，仅显示对应分类下的记忆
+- **小标签筛选**：搜索框实时过滤标签 + 分页浏览 + 点击多选/取消
+- **已选标签**：底部展示已选小标签 pill，支持单个移除和一键清空
+- **联动**：大标签/小标签变更后，记忆列表自动重新查询
+
+---
+
 ## 2026-07-26 — 时间胶囊页面白屏修复
 
 ### 问题描述

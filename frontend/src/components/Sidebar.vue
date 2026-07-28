@@ -4,7 +4,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useExperienceStore } from '@/stores/experience'
 import { useInsightStore } from '@/stores/insight'
 import { useBirthdayStore } from '@/stores/birthday'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import {
   Brain,
   Search,
@@ -26,6 +26,7 @@ import {
   Loader2,
   Hourglass,
   Download,
+  Wrench,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -34,7 +35,8 @@ const exp = useExperienceStore()
 const insight = useInsightStore()
 const birthdayStore = useBirthdayStore()
 
-const insightExpanded = ref(true)
+const insightExpanded = ref(false)
+const toolsExpanded = ref(false)
 
 onMounted(() => {
   exp.load()
@@ -50,13 +52,25 @@ onMounted(() => {
   insight.fetchArchive()
 })
 
-const navItems = [
+// 路由变化时自动展开对应分组
+watch(() => route.path, () => {
+  if (isInGroup('insight')) insightExpanded.value = true
+  if (isInGroup('tools')) toolsExpanded.value = true
+}, { immediate: true })
+
+const topNavItems = [
   { to: '/', label: '首页', icon: Brain },
   { to: '/memories', label: '记忆', icon: Search },
   { to: '/capsules', label: '时间胶囊', icon: Hourglass },
+]
+
+const insightItems = [
   { to: '/graph', label: '图谱', icon: GitGraph },
   { to: '/analytics', label: '分析', icon: BarChart3 },
   { to: '/compare', label: '对比', icon: GitCompare },
+]
+
+const toolItems = [
   { to: '/export', label: '导出', icon: Download },
   { to: '/settings', label: '设置', icon: Settings },
 ]
@@ -64,6 +78,16 @@ const navItems = [
 function isActive(path: string) {
   if (path === '/') return route.path === '/'
   return route.path.startsWith(path)
+}
+
+function isInGroup(group: string) {
+  if (group === 'insight') {
+    return ['/graph', '/analytics', '/compare', '/insight'].some(p => route.path.startsWith(p))
+  }
+  if (group === 'tools') {
+    return ['/export', '/settings'].some(p => route.path.startsWith(p))
+  }
+  return false
 }
 </script>
 
@@ -81,8 +105,9 @@ function isActive(path: string) {
 
     <!-- Nav -->
     <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+      <!-- 顶层导航：首页、记忆、时间胶囊 -->
       <router-link
-        v-for="item in navItems"
+        v-for="item in topNavItems"
         :key="item.to"
         :to="item.to"
         :class="[
@@ -96,24 +121,42 @@ function isActive(path: string) {
         {{ item.label }}
       </router-link>
 
-      <!-- 自我洞察模块 -->
+      <!-- 分析与洞察 -->
       <div class="mt-3 border-t border-sidebar-border pt-3">
-        <!-- 一级标题 -->
         <button
           @click="insightExpanded = !insightExpanded"
-          class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-semibold text-foreground hover:bg-accent/60 transition-all duration-200"
+          class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+          :class="isInGroup('insight') ? 'text-primary bg-primary/5' : 'text-foreground hover:bg-accent/60'"
         >
           <Sparkles class="w-4 h-4 text-primary" />
-          <span class="flex-1 text-left">自我洞察</span>
+          <span class="flex-1 text-left">分析与洞察</span>
           <component
             :is="insightExpanded ? ChevronDown : ChevronRight"
             class="w-3.5 h-3.5 text-muted-foreground"
           />
         </button>
 
-        <!-- 二级菜单 -->
         <Transition name="slide">
           <div v-if="insightExpanded" class="mt-1 space-y-0.5 pl-2">
+            <!-- 图谱、分析、对比 -->
+            <router-link
+              v-for="item in insightItems"
+              :key="item.to"
+              :to="item.to"
+              :class="[
+                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all duration-200',
+                isActive(item.to)
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
+              ]"
+            >
+              <component :is="item.icon" class="w-[16px] h-[16px]" />
+              {{ item.label }}
+            </router-link>
+
+            <!-- 分隔线 -->
+            <div class="my-1 border-t border-sidebar-border/50" />
+
             <!-- 周报 -->
             <router-link
               to="/insight/weekly"
@@ -166,6 +209,41 @@ function isActive(path: string) {
               <span class="flex-1">洞察档案</span>
               <!-- 未读红点 -->
               <span v-if="insight.hasUnreadArchive" class="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+            </router-link>
+          </div>
+        </Transition>
+      </div>
+
+      <!-- 设置与工具 -->
+      <div class="mt-2">
+        <button
+          @click="toolsExpanded = !toolsExpanded"
+          class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200"
+          :class="isInGroup('tools') ? 'text-primary bg-primary/5' : 'text-foreground hover:bg-accent/60'"
+        >
+          <Wrench class="w-4 h-4" :class="isInGroup('tools') ? 'text-primary' : 'text-muted-foreground'" />
+          <span class="flex-1 text-left">设置与工具</span>
+          <component
+            :is="toolsExpanded ? ChevronDown : ChevronRight"
+            class="w-3.5 h-3.5 text-muted-foreground"
+          />
+        </button>
+
+        <Transition name="slide">
+          <div v-if="toolsExpanded" class="mt-1 space-y-0.5 pl-2">
+            <router-link
+              v-for="item in toolItems"
+              :key="item.to"
+              :to="item.to"
+              :class="[
+                'flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-all duration-200',
+                isActive(item.to)
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted-foreground hover:bg-accent/80 hover:text-foreground',
+              ]"
+            >
+              <component :is="item.icon" class="w-[16px] h-[16px]" />
+              {{ item.label }}
             </router-link>
           </div>
         </Transition>
@@ -309,7 +387,7 @@ function isActive(path: string) {
   100% { opacity: 0; }
 }
 
-/* 自我洞察菜单展开/收起动画 */
+/* 下拉菜单展开/收起动画 */
 .slide-enter-active {
   animation: slideDown 0.2s ease-out;
 }

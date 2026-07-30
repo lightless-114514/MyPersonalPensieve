@@ -264,3 +264,40 @@ GET /api/memories/tags（已有，复用）
 | `frontend/src/pages/CapsulePage.vue` | 变量声明顺序调整：5个筛选变量移至 `useQuery` 之前 |
 | `frontend/vite.config.ts` | proxy target 改为 `127.0.0.1:8000` |
 | `frontend/vite.config.js` | 同步修改编译输出文件 |
+
+---
+
+## 2026-07-28 — 侧边栏整合 & 大标签筛选修复
+
+### 侧边栏整合
+
+将侧边栏从8项平铺导航整合为5项（3独立 + 2下拉分组），减少视觉噪音，核心功能保持一键直达。
+
+| 顶层 | 类型 | 子项 |
+|------|------|------|
+| 首页 | 独立链接 | — |
+| 记忆 | 独立链接 | — |
+| 时间胶囊 | 独立链接 | — |
+| 分析与洞察 | 折叠下拉 | 图谱、分析、对比、周报、月报、洞察档案 |
+| 设置与工具 | 折叠下拉 | 导出、设置 |
+
+**改动要点**：
+- 原"自我洞察"模块合并进"分析与洞察"下拉，用分隔线区分分析工具与洞察报告
+- 新增路由监听：`watch(route.path)` 自动展开当前路由所属分组
+- 分组按钮在子项激活时高亮（`isInGroup` 判断）
+- 新增 `Wrench` 图标用于"设置与工具"分组
+
+### 时间胶囊大标签筛选修复
+
+**问题**：胶囊列表页点击大标签筛选按钮无效果，列表不变化。
+
+**根因**：`getCapsules` API 函数前端传参 `bigTag`（camelCase），但后端参数名为 `big_tag`（snake_case）。axios 的 `params` 对象不会自动转换键名，后端收不到 `big_tag` 参数导致筛选无效。
+
+**修复**：在 `getCapsules` 中将 `bigTag` 解构后转为 `big_tag` 传给后端。
+
+### 修改文件
+
+| 文件 | 改动 |
+|------|------|
+| `frontend/src/components/Sidebar.vue` | 侧边栏重构：8平铺→3独立+2下拉；合并自我洞察模块；新增路由监听自动展开 |
+| `frontend/src/api/index.ts` | `getCapsules` 参数 `bigTag`→`big_tag` 转换修复 |

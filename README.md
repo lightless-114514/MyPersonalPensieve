@@ -21,11 +21,11 @@
 
 ### 🏠 首页工作台
 
-问候语、最近记忆列表、快速记录入口。
+问候语、最近记忆列表、快速记录入口、时间胶囊到期提醒。
 
 ### 📝 记忆管理
 
-支持文字记录的创建、编辑、删除，可添加自定义标签和大标签分类（工作、生活、学习等），支持收藏功能快速标记重要记忆。
+支持文字记录的创建、编辑、删除，可添加自定义标签和大标签分类（工作、生活、学习等），支持收藏功能快速标记重要记忆。支持文件附件上传。
 
 ### ⚡ 经验系统
 
@@ -33,7 +33,7 @@
 
 ### 🤖 AI 智能处理
 
-接入 OpenAI API，自动从记忆内容中提取知识实体与关系、分析情感倾向，支持自然语言查询记忆。
+接入 OpenAI 兼容 API（DeepSeek / OpenAI 等），自动从记忆内容中提取知识实体与关系、分析情感倾向，支持自然语言查询记忆。
 
 ### 🕸️ 知识图谱
 
@@ -61,17 +61,33 @@
 
 情感趋势图表，按时间范围和大标签查看情感变化，直观了解情绪走向。
 
-### ⚙️ 设置
+### 📈 洞察报告
 
-暗色模式切换、OpenAI API 密钥配置、中英文语言切换。
+AI 自动生成周报和月报，总结记忆中的关键主题、情感趋势和重要事件。支持历史报告归档查看和详情阅读。
+
+### ⚖️ 对比分析
+
+选择两个时间段进行记忆对比，AI 分析两个时期的情感变化、主题差异和成长轨迹。
+
+### 🎂 生日提醒
+
+记录联系人的生日，到期自动提醒，支持本地存储管理。
 
 ### ⏳ 时间胶囊
 
 将日记封存到未来指定日期，到期后首页弹出通知提醒开封。封存期间不可查看内容，强行破拆需经历 30 秒冷静期倒计时。支持分页列表、状态过滤和搜索，后端持久化存储。
 
+### 📤 数据导出
+
+支持将记忆数据导出为 PDF 文件，方便备份和分享。
+
+### ⚙️ 设置
+
+暗色模式切换、LLM 供应商配置（API 密钥、Base URL、模型选择）、中英文语言切换。
+
 ### 🖥️ 桌面端
 
-基于 Electron 封装，支持独立窗口运行。
+基于 Electron 封装，支持独立窗口运行，后端通过 PyInstaller 打包为单文件。
 
 ---
 
@@ -120,6 +136,7 @@
 | 样式 | **Tailwind CSS** |
 | 构建工具 | **Vite** |
 | 数据请求 | **TanStack Query** |
+| 状态管理 | **Pinia** |
 | 图表 | **D3.js** |
 
 ### 桌面端
@@ -133,17 +150,78 @@
 
 ## 开发环境
 
+### 环境要求
+
+- Python 3.12+
+- Node.js 18+
+
+### 后端（端口 8000）
+
 ```bash
-# 后端
 cd backend
 python -m venv .venv
+# Windows
 .venv\Scripts\pip install -e .
 .venv\Scripts\uvicorn.exe app.main:app --port 8000
+# macOS/Linux
+source .venv/bin/activate
+pip install -e .
+uvicorn app.main:app --port 8000
+```
 
-# 前端
+### 前端（端口 5173）
+
+```bash
 cd frontend
 npm install
 npm run dev
+```
+
+前端已配置代理，`/api` 请求自动转发到后端 `http://localhost:8000`。
+
+### 配置
+
+后端配置项见 `backend/.env.example`，复制为 `.env` 后按需修改：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| SERVER_HOST | 127.0.0.1 | 后端监听地址 |
+| SERVER_PORT | 8000 | 后端端口 |
+| LLM_API_KEY | 空 | LLM API Key |
+| LLM_BASE_URL | 空 | LLM API Base URL |
+| LLM_MODEL | deepseek-v4-flash | 默认模型名称 |
+| LLM_PROVIDER | deepseek | LLM 供应商 |
+| PENSIEVE_DATA_DIR | backend/data | 数据目录 |
+
+---
+
+## 项目结构
+
+```
+MyPersonalPensieve/
+├── backend/                 # FastAPI 后端
+│   ├── app/
+│   │   ├── main.py         # 应用入口
+│   │   ├── config.py       # 配置管理
+│   │   ├── models/         # SQLAlchemy 数据模型
+│   │   ├── routes/         # API 路由
+│   │   ├── services/       # 业务逻辑层
+│   │   └── schemas/        # Pydantic 请求/响应模型
+│   ├── alembic/            # 数据库迁移
+│   └── data/               # SQLite + ChromaDB 数据存储
+├── frontend/               # Vue 3 前端
+│   ├── src/
+│   │   ├── pages/          # 页面组件
+│   │   ├── components/     # 通用组件
+│   │   ├── stores/         # Pinia 状态管理
+│   │   ├── api/            # API 客户端
+│   │   └── types/          # TypeScript 类型定义
+│   └── ...
+├── electron/               # Electron 桌面端
+│   ├── main.js             # 主进程
+│   ├── preload.js          # 预加载脚本
+│   └── scripts/            # 打包脚本
+└── docker-compose.yml      # Docker 部署配置（旧版，仅供参考）
 ```
 
 ---
